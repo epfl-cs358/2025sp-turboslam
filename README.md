@@ -93,7 +93,7 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 
 ## Component List
 | Category | Quantity | Cost (CHF) |
-|----------|------|----------|------------|
+|------|----------|------------|
 | Tamiya Blitzer Beetle | 1 | 129 |
 | LiDAR 360 | 1 | 79.90 |
 | 7.2V Battery | 1 | 23.90 (+ 5.0) |
