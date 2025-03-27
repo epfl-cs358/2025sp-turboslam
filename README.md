@@ -70,9 +70,7 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 2. **Middle Layer:** Microcontroller & Electronics Mount
 3. **Top Layer:** LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
 
-![Chassis]()  
-![Microcontroller Support](IMG_3695.jpeg)  
-![LiDAR Mount](IMG_3696.jpeg)
+// Add images
 
 ## Challenges & Solutions
 ### 1. **Building a Custom Chassis**
