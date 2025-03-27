@@ -70,7 +70,7 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 2. **Middle Layer:** Microcontroller & Electronics Mount
 3. **Top Layer:** LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
 
-![Chassis](IMG_3694.jpeg)  
+![Chassis]()  
 ![Microcontroller Support](IMG_3695.jpeg)  
 ![LiDAR Mount](IMG_3696.jpeg)
 
@@ -97,12 +97,12 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 | Tamiya Blitzer Beetle | 1 | 129 |
 | LiDAR 360 | 1 | 79.90 |
 | 7.2V Battery | 1 | 23.90 (+ 5.0) |
-| Accelerometer/Magnetometer 9DoF IMU | 1 | 19.90 |
 | Servo | 1 | 21.0 |
-| HC-SR04 | 1 | 2.0 |
-| ESP32 | 1 | 4.0 |
+| Accelerometer/Magnetometer 9DoF IMU | 1 | 19.90 |
 | DMS15 Servo | 1 | 5.0 |
+| ESP32 | 1 | 4.0 |
 | Encoder | 1 | 3.90 |
+| HC-SR04 | 1 | 2.0 |
 
 ## Milestones & Organization
 Project board: [Monday.com Board](https://limsarah112s-team.monday.com/boards/1877147787)
