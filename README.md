@@ -90,20 +90,18 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 **Solution:** We used an **ESP32 microcontroller** for **WiFi-based remote communication**.
 
 ## Component List
-| Category | Quantity | Cost (CHF) |
-|------|----------|------------|
-| Tamiya Blitzer Beetle | 1 | 129 |
-| LiDAR 360 | 1 | 79.90 |
-| 7.2V Battery | 1 | 23.90 (+ 5.0) |
-| Servo | 1 | 21.0 |
-| Accelerometer/Magnetometer 9DoF IMU | 1 | 19.90 |
-| DMS15 Servo | 1 | 5.0 |
-| ESP32 | 1 | 4.0 |
-| Encoder | 1 | 3.90 |
-| HC-SR04 | 1 | 2.0 |
+| Category | Quantity | Cost (CHF) | Info |
+|------|----------|------------|------------|
+| Tamiya Blitzer Beetle | 1 | 129 | [Manual](https://www.tamiyausa.com/media/files/58502ml-829-5367.pdf) |
+| RPLIDAR C1 | 1 | 79.90 | [Datasheet](https://d229kd5ey79jzj.cloudfront.net/3157/SLAMTEC_rplidar_datasheet_C1_v1.0_en.pdf), [SDK](https://github.com/Slamtec/rplidar_sdk), [Wiki](https://www.waveshare.com/wiki/RPLIDAR_C1) |
+| 7.2V Battery | 1 | 23.90 (+ 5.0) | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
+| BN055 9DoF IMU | 1 | 19.90 | [Product Page](https://www.bastelgarage.ch/bno055-capteur-intelligent-a-9-axes?search=9dof), [Datasheet](https://cdn-shop.adafruit.com/datasheets/BST_BNO055_DS000_12.pdf)|
+| DMS15 Servo | 2 | 5.0 | [Wiki](https://wiki.dfrobot.com/DSS-M15S_270%C2%B0_15KG_DF_Metal_Servo_with_Analog_Feedback_SKU__SER0044) |
+| Wemos D1-R32 | 1 | 4.0 |  |
+| AS5600 Encoder | 1 | 3.90 | [Datasheet](https://files.seeedstudio.com/wiki/Grove-12-bit-Magnetic-Rotary-Position-Sensor-AS5600/res/Magnetic%20Rotary%20Position%20Sensor%20AS5600%20Datasheet.pdf) |
+| HC-SR04 Ultrasonic Sensor | 1 | 2.0 | [Datasheet](https://handsontec.com/dataspecs/sensor/SR-04-Ultrasonic.pdf) |
+| GPS NEO-6M | 1 | 13.50 | [Datasheet](https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf) |
 
-## Milestones & Organization
-Project board: [Monday.com Board](https://limsarah112s-team.monday.com/boards/1877147787)
 
 ## Evaluation Metrics
 ### 1. **Navigation Precision & Path Efficiency**
