@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TurboSLAM Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>TurboSLAM </h1>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="showTab('user')">User Mode</button>
+        <button class="tab-button" onclick="showTab('debug')">Debug Mode</button>
+    </div>
+
+    <div id="userView" class="tab-content active-tab">
+        <h2>User Control</h2>
+        <button class="btn btn-orange" onclick="setOrigin()">Set Origin</button>
+        <button class="btn btn-green" onclick="startExploration()">Explore</button>
+        <input type="text" id="xCoord" placeholder="X Coordinate">
+        <input type="text" id="yCoord" placeholder="Y Coordinate">
+        <button class="btn btn-red" onclick="goToTarget()">GO</button>
+
+
+        <div id="status">
+            <p><strong>Current Phase:</strong> <span id="phase">Idle</span></p>
+            <p><strong>Robot Position:</strong> <span id="position">Unknown</span></p>
+        </div>
+
+        <div class="grid-container">
+            <div class="data-box" id="gpsBox">
+                <h3>GPS Navigation</h3>
+            </div>
+        
+            <div class="data-box" id="mapBox">
+                <h3>3D Map</h3>
+            </div>
+        </div>
+        
+    </div>
+
+    <div id="debugView" class="tab-content">
+        <h2>Debug Info</h2>
+        <p><strong>Raw Log:</strong></p>
+        <pre id="debugLog">Waiting for data...</pre>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

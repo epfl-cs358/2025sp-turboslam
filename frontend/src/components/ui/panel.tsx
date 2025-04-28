@@ -1,18 +1,18 @@
 import { ReactNode } from "react";
 
-type MyPanelProps = {
+type PanelProps = {
   children: ReactNode;
   title?: string;
   variant?: "light" | "dark" | "transparent";
   className?: string;
 };
 
-export function MyPanel({
+export function Panel({
   title,
   children,
   variant = "light",
   className = "",
-}: MyPanelProps) {
+}: PanelProps) {
   const base =
     variant === "dark"
       ? "panel-dark"

@@ -1,7 +1,6 @@
-import React from "react";
-import Joystick from "rc-joystick";
+import RcJoystick from "rc-joystick";
 
-export function MyJoystick({
+export function Joystick({
   onChange,
   className = "",
   ...props
@@ -12,7 +11,7 @@ export function MyJoystick({
 }) {
   return (
     <div className={`p-2 ${className}`}>
-      <Joystick
+      <RcJoystick
         baseRadius={60}
         controllerRadius={30}
         onChange={onChange}
