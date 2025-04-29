@@ -31,7 +31,7 @@ docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888 
 If you don't have ros2 installed on your host machine, run:
 
 ```bash
-docker run -it --net=host osrf/ros:noetic-desktop-full bash
+docker run -it --net=host osrf/ros:humble-desktop-full bash
 ```
 
 And then you can list the topics with:
