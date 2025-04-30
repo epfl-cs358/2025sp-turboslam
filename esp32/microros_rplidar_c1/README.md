@@ -28,10 +28,10 @@ To run the agent, run (while being connected on the same WiFi network as the ESP
 docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888 -v6
 ```
 
-If you don't have ros2 installed on your host machine, run:
+If you don't have ros2 installed on your host machine, run (you might need to do `docker pull ros:humble` first):
 
 ```bash
-docker run -it --net=host osrf/ros:humble-desktop-full bash
+docker run -it --net=host ros:humble bash
 ```
 
 And then you can list the topics with:
