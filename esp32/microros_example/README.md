@@ -31,7 +31,34 @@ ros2 run micro_ros_setup build_agent.sh
 source install/local_setup.bash
 ```
 
+or if you use zsh instead of bash:
+
+```bash
+# Source the ROS 2 installation
+source /opt/ros/$ROS_DISTRO/setup.zsh
+
+# Set up the micro-ROS workspace
+cd ../microros_ws
+
+# Update dependencies using rosdep
+sudo apt update && rosdep update
+rosdep install --from-paths src --ignore-src -y
+
+# Build micro-ROS tools and source them
+colcon build
+source install/local_setup.zsh
+
+# Download micro-ROS-Agent packages
+ros2 run micro_ros_setup create_agent_ws.sh
+
+# Build step
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.zsh
+```
+
 ## Run
+
+### Without Docker
 
 NOTE: before running any command in a new terminal, source the ROS 2 installation: `source /opt/ros/$ROS_DISTRO/setup.bash`.
 
@@ -65,6 +92,7 @@ You should see the following output:
 ```
 
 By subscribing to the `/micro_ros_platformio_node_publisher` with the command `ros2 topic echo /micro_ros_platformio_node_publisher` topic we can see the output of the ESP32 board:
+
 ```
 vince ~ $ ros2 topic echo /micro_ros_platformio_node_publisher
 data: 20
@@ -77,6 +105,12 @@ data: 23
 ...
 ```
 
+### With Docker
+
+Run `docker run -it --rm --net=host --device=/dev/ttyUSB0 microros/micro-ros-agent:humble serial --dev /dev/ttyUSB0`
+
 ## TODO: implement UDP communication (now it's only Serial)
+
+Run `docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888 -v6`
 
 https://github.com/Geibinger/micro-ROS-samples/blob/main/README.md
