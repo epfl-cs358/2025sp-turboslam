@@ -1,4 +1,4 @@
-This is a fork of
+This is a fork of https://github.com/guido57/ESP32_RPLIDAR_C1_ROS but that uses the original SLAMTEC library (ported to ESP32, source: https://github.com/gfvalvo/SlamtecLidarESP32/tree/main).
 
 IMPORTANT FOR SUCESSFUL BUILD:
 
