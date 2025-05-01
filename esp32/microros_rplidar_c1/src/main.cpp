@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <micro_ros_platformio.h>
+#include <ICM_20948.h>
+#include <AS5600.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 //#include <rclc/executor.h>
@@ -9,11 +11,26 @@
 #include "credentials.h"
 #include "RplidarC1.h"
 
+#include "ImuSensor.h"
+
+#include "UltraSonicSensor.h"
+
+#include "AS5600Encoder.h"
+
+AS5600Encoder encoder;
+rcl_publisher_t encoder_publisher;
+
+
 // Micro-ROS variables
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_publisher_t publisher;
 rcl_node_t node;
+
+rcl_publisher_t imu_publisher;
+
+UltraSonicSensor ultrasonic(12, 14);  
+rcl_publisher_t range_publisher;
     
 #define RCCHECK(fn, msg)     { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 #define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
@@ -85,6 +102,49 @@ rcl_ret_t init_ros() {
         return ret;        
     }
 
+    ret = rclc_publisher_init_default(
+    &imu_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+    "/imu"
+);
+if (RCL_RET_OK != ret){
+    printf("imu publisher init error=%d\r\n", ret);
+    return ret;
+}
+
+// IMU
+ret = rclc_publisher_init_default(
+    &imu_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+    "/imu"
+);
+if (RCL_RET_OK != ret){
+    printf("imu publisher init error=%d\r\n", ret);
+    return ret;
+}
+
+// US sensor
+ret = rclc_publisher_init_default(
+    &range_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Range),
+    "/ultrasonic"
+);
+if (ret != RCL_RET_OK) {
+    printf("ultrasonic publisher init failed: %d\n", ret);
+    return ret;
+}
+
+// Encoder 
+rclc_publisher_init_default(
+    &encoder_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "/encoder/angle"
+);
+
 //     // create 20 msecs timer
 //     // printf("create lidar timer...\r\n");
 //     // const unsigned int lidar_timer_timeout = 200;
@@ -133,6 +193,16 @@ void setup() {
     lidar.resetLidar();
     delay(800);
     lidar.startLidar();
+
+    if (!imuSensor.begin()) {
+        Serial.println("IMU failed to initialize, rebooting...");
+        esp_restart();
+    }
+
+    ultrasonic.begin();
+
+    encoder.begin();
+    
 }
 
 //rcl_ret_t ret;
@@ -185,6 +255,26 @@ void loop() {
     Serial.printf("got %d points in %lu ms. Frame Processing in %lu. Frame publishing in %lu. Total loop in %lu ms. Freq=%.1f Hz Serial2.available=%d\r\n",
         count, uart_elapsed, process_elapsed, publish_elapsed, total_loop_time, 1000.0/loop_period, Serial2.available() );
     total_loop_time = millis();
+
+    // Publish IMU data
+    imuSensor.readAndUpdate();
+    rcl_ret_t ret_imu = rcl_publish(&imu_publisher, &imu_msg, NULL);
+    if (ret_imu != RCL_RET_OK) {
+        printf("rcl_publish IMU error=%d\r\n", ret_imu);
+    }
+
+    //US data
+    float dist = ultrasonic.readDistance();
+    if (dist > 0) {
+        ultrasonic.range_msg.range = dist;
+        ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
+        ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+        rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
+    }
+
+    // Encoder data
+    encoder.update();
+    rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
 
     delay(30);
 }
