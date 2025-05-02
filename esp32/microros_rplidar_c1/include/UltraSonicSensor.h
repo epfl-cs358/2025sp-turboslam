@@ -8,7 +8,7 @@ class UltraSonicSensor {
 public:
     UltraSonicSensor(uint8_t triggerPin, uint8_t echoPin);
 
-    void begin();
+    bool begin();
     float readDistance();
     sensor_msgs__msg__Range range_msg;
 

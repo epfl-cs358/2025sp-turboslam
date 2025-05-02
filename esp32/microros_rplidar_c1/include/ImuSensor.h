@@ -4,6 +4,8 @@
 #include <ICM_20948.h>
 #include <sensor_msgs/msg/imu.h>
 
+extern sensor_msgs__msg__Imu imu_msg;
+
 class ImuSensor {
 public:
     bool begin();
@@ -12,6 +14,5 @@ public:
 };
 
 extern ImuSensor imuSensor;
-extern sensor_msgs__msg__Imu imu_msg;
 
 #endif

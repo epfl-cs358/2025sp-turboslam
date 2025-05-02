@@ -7,6 +7,7 @@
 #include <rclc/rclc.h>
 //#include <rclc/executor.h>
 #include <sensor_msgs/msg/laser_scan.h>
+#include <sensor_msgs/msg/imu.h>
 
 #include "credentials.h"
 #include "RplidarC1.h"
@@ -28,6 +29,7 @@ rcl_publisher_t publisher;
 rcl_node_t node;
 
 rcl_publisher_t imu_publisher;
+ImuSensor imuSensor;
 
 UltraSonicSensor ultrasonic(12, 14);  
 rcl_publisher_t range_publisher;
@@ -102,48 +104,37 @@ rcl_ret_t init_ros() {
         return ret;        
     }
 
+    // IMU
     ret = rclc_publisher_init_default(
-    &imu_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-    "/imu"
-);
-if (RCL_RET_OK != ret){
-    printf("imu publisher init error=%d\r\n", ret);
-    return ret;
-}
+        &imu_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+        "/imu"
+    );
+    if (RCL_RET_OK != ret){
+        printf("imu publisher init error=%d\r\n", ret);
+        return ret;
+    }
 
-// IMU
-ret = rclc_publisher_init_default(
-    &imu_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-    "/imu"
-);
-if (RCL_RET_OK != ret){
-    printf("imu publisher init error=%d\r\n", ret);
-    return ret;
-}
+    // US sensor
+    ret = rclc_publisher_init_default(
+        &range_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Range),
+        "/ultrasonic"
+    );
+    if (ret != RCL_RET_OK) {
+        printf("ultrasonic publisher init failed: %d\n", ret);
+        return ret;
+    }
 
-// US sensor
-ret = rclc_publisher_init_default(
-    &range_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Range),
-    "/ultrasonic"
-);
-if (ret != RCL_RET_OK) {
-    printf("ultrasonic publisher init failed: %d\n", ret);
-    return ret;
-}
-
-// Encoder 
-rclc_publisher_init_default(
-    &encoder_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/encoder/angle"
-);
+    // Encoder 
+    rclc_publisher_init_default(
+        &encoder_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "/encoder/angle"
+    );
 
 //     // create 20 msecs timer
 //     // printf("create lidar timer...\r\n");
@@ -182,7 +173,7 @@ void setup() {
     
     connect_wifi();
    
-    if( RCL_RET_OK != init_ros()){
+    if(RCL_RET_OK != init_ros()){
       printf("init_ros error. Rebooting ...\r\n");
       esp_restart();
     }
@@ -199,10 +190,15 @@ void setup() {
         esp_restart();
     }
 
-    ultrasonic.begin();
+    if (!ultrasonic.begin()) {
+        Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
+        esp_restart();
+    }
 
-    encoder.begin();
-    
+    if (!encoder.begin()) {
+        Serial.println("Encoder failed to initialize, rebooting...");
+        esp_restart();
+    }
 }
 
 //rcl_ret_t ret;
@@ -269,12 +265,18 @@ void loop() {
         ultrasonic.range_msg.range = dist;
         ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
         ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
-        rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
+        rcl_ret_t ret_range = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
+        if (ret_range != RCL_RET_OK) {
+            printf("rcl_publish range error=%d\r\n", ret_range);
+        }
     }
 
     // Encoder data
     encoder.update();
-    rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
+    rcl_ret_t ret_range = rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
+    if (ret_range != RCL_RET_OK) {
+        printf("rcl_publish encoder error=%d\r\n", ret_range);
+    }
 
     delay(30);
 }

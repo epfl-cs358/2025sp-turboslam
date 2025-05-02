@@ -12,7 +12,7 @@ void RplidarC1::begin() {
     scan_msg.header.frame_id.size = strlen(scan_msg.header.frame_id.data);
     scan_msg.angle_min = MIN_ANGLE;
     scan_msg.angle_max = MAX_ANGLE;
-    scan_msg.angle_increment = ANGLE_INCREMENT;
+    scan_msg.angle_increment = ANGLE_INCREMENT;;
     scan_msg.time_increment = 0.0;
     scan_msg.scan_time = 0.1; // Assuming 10 Hz scan rate
     scan_msg.range_min = MIN_RANGE;

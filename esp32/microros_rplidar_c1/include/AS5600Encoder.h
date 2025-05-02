@@ -8,7 +8,7 @@
 class AS5600Encoder {
 public:
     AS5600Encoder();
-    void begin();
+    bool begin();
     void update();
     std_msgs__msg__Int32 angle_msg;
 
