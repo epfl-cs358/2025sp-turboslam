@@ -1,12 +1,15 @@
 // ImuSensor.cpp
 #include <ImuSensor.h>
 #include <Wire.h>
+#include <MadgwickAHRS.h>
 
 
 ICM_20948_I2C imu;
 TwoWire ImuWire(0);  // Create a new I2C bus instance
 
 sensor_msgs__msg__Imu imu_msg;
+
+Madgwick filter; 
 
 bool ImuSensor::begin() {
     ImuWire.begin(21, 22);  // SDA, SCL pins
@@ -16,40 +19,59 @@ bool ImuSensor::begin() {
     }
     Serial.println("ICM-20948 IMU initialized");
 
+    filter.begin(100); // 100 hz rate (change if needed)
+
     // Initialize message frame
-    imu_msg.header.frame_id.data = (char *)"imu_frame";
-    imu_msg.header.frame_id.size = strlen(imu_msg.header.frame_id.data);
+    imu_msg.header.frame_id.data     = (char *)"imu_frame";
+    imu_msg.header.frame_id.size     = strlen(imu_msg.header.frame_id.data);
     imu_msg.header.frame_id.capacity = imu_msg.header.frame_id.size + 1;
 
     return true;
 }
 
 void ImuSensor::readAndUpdate() {
+    // This is a temporary version for the data processing of the IMU,
+    // Lio-Sam might need the IMU data in a different format
     if (!imu.dataReady()) return;
 
-    imu.getAGMT();  // Refresh internal readings
+    imu.getAGMT();
 
-    // Fill message with data
-    imu_msg.header.stamp.sec = millis() / 1000;
+    imu_msg.header.stamp.sec     = millis() / 1000;
     imu_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
 
-    imu_msg.linear_acceleration.x = imu.accX() * 9.80665 / 1000.0;
-    imu_msg.linear_acceleration.y = imu.accY() * 9.80665 / 1000.0;
-    imu_msg.linear_acceleration.z = imu.accZ() * 9.80665 / 1000.0;
+    float ax = imu.accX() / 1000.0;
+    float ay = imu.accY() / 1000.0;
+    float az = imu.accZ() / 1000.0;
 
-    imu_msg.angular_velocity.x = imu.gyrX() * DEG_TO_RAD;
-    imu_msg.angular_velocity.y = imu.gyrY() * DEG_TO_RAD;
-    imu_msg.angular_velocity.z = imu.gyrZ() * DEG_TO_RAD;
+    float gx = imu.gyrX() * DEG_TO_RAD;
+    float gy = imu.gyrY() * DEG_TO_RAD;
+    float gz = imu.gyrZ() * DEG_TO_RAD;
 
-    imu_msg.orientation.w = 0.0;  // Orientation is not calculated here
-    imu_msg.orientation.x = 0.0;
-    imu_msg.orientation.y = 0.0;
-    imu_msg.orientation.z = 0.0;
+    filter.updateIMU(gx, gy, gz, ax, ay, az);
 
-    // Covariances (optional)
-    for (int i = 0; i < 9; ++i) {
-        imu_msg.linear_acceleration_covariance[i] = 0.0;
-        imu_msg.angular_velocity_covariance[i] = 0.0;
-        imu_msg.orientation_covariance[i] = -1.0;  // Indicates invalid
-    }
+    imu_msg.linear_acceleration.x = ax * 9.80665;
+    imu_msg.linear_acceleration.y = ay * 9.80665;
+    imu_msg.linear_acceleration.z = az * 9.80665;
+
+    imu_msg.angular_velocity.x = gx;
+    imu_msg.angular_velocity.y = gy;
+    imu_msg.angular_velocity.z = gz;
+
+    // Compute orientation
+    float roll  = filter.getRollRadians();
+    float pitch = filter.getPitchRadians();
+    float yaw   = filter.getYawRadians();
+
+    // quaternion are privates, so we need to convert them here
+    float cy = cos(yaw * 0.5);
+    float sy = sin(yaw * 0.5);
+    float cp = cos(pitch * 0.5);
+    float sp = sin(pitch * 0.5);
+    float cr = cos(roll * 0.5);
+    float sr = sin(roll * 0.5);
+
+    imu_msg.orientation.w = cr * cp * cy + sr * sp * sy;
+    imu_msg.orientation.x = sr * cp * cy - cr * sp * sy;
+    imu_msg.orientation.y = cr * sp * cy + sr * cp * sy;
+    imu_msg.orientation.z = cr * cp * sy - sr * sp * cy;
 }
