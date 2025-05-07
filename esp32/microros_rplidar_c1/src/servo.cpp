@@ -6,23 +6,37 @@ DMS15::DMS15(int pin) : servoPin(pin) {}
 bool DMS15::begin() {
     servo.attach(servoPin);
     Serial.printf("Servo attached to pin %d\n", servoPin);
+    servo.write(110);  // Set initial angle to 90 degrees
     return servo.attached(); 
 }
 
 void DMS15::tiltLidar(float angleMin, float angleMax, unsigned long T_ms) {
-    static unsigned long startTime = millis(); 
     unsigned long now = millis();
-    float elapsed = now - startTime;
+    float t = fmod(now, T_ms) / (float)T_ms;
 
-    float phase = ((int)elapsed % T_ms) / (float)T_ms * 2 * PI;
-
-    float amplitude = (angleMax - angleMin) / 2.0;
-    float mid = (angleMax + angleMin) / 2.0;
-    float angle = mid + amplitude * sin(phase);
+    float progress = (t < 0.5f) ? (t * 2.0f) : (2.0f * (1.0f - t));
+    float angle = angleMin + (angleMax - angleMin) * progress;
 
     currentAngle = angle;
     servo.write(angle);
 }
+
+// void DMS15::tiltLidar() {
+//     static bool tiltUp = false;
+//     static unsigned long lastMoveTime = 0;
+//     const unsigned long moveInterval = 600;  // 1 second
+
+//     unsigned long currentTime = millis();
+//     if (currentTime - lastMoveTime >= moveInterval) {
+//         if (tiltUp) {
+//             servo.write(110);
+//         } else {
+//             servo.write(70);
+//         }
+//         tiltUp = !tiltUp;
+//         lastMoveTime = currentTime;
+//     }
+// }
 
 void DMS15::setAngle(int angle) {
     angle = constrain(angle, 0, 180); 

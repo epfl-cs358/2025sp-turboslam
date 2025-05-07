@@ -11,6 +11,7 @@ public:
     void setAngle(int angle);
     // Used to tilt the lidar
     void tiltLidar(float angleMin, float angleMax, unsigned long T_ms);
+    //void tiltLidar();
     int getAngle() const;
 
 private:

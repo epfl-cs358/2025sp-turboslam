@@ -3,22 +3,31 @@
 #include <Wire.h>
 #include <MadgwickAHRS.h>
 
-
 ICM_20948_I2C imu;
 TwoWire ImuWire(0);  // Create a new I2C bus instance
-
-sensor_msgs__msg__Imu imu_msg;
 
 Madgwick filter; 
 
 bool ImuSensor::begin() {
     ImuWire.begin(21, 22);  // SDA, SCL pins
-    if (imu.begin(ImuWire) != ICM_20948_Stat_Ok) {
+    ImuWire.setClock(400000); // Set I2C clock speed to 400kHz
+
+    Serial.println("\nI2C Scanner");
+    for (byte address = 1; address < 127; address++) {
+      ImuWire.beginTransmission(address);
+      if (ImuWire.endTransmission() == 0) {
+        Serial.print("I2C device found at address 0x");
+        Serial.println(address, HEX);
+      }
+    }
+
+    if (imu.begin(ImuWire, 0x68) != ICM_20948_Stat_Ok) {
         Serial.println("Failed to initialize ICM-20948");
+        Serial.println(imu.statusString());
         return false;
     }
-    Serial.println("ICM-20948 IMU initialized");
 
+    Serial.println("ICM-20948 IMU initialized");
     filter.begin(100); // 100 hz rate (change if needed)
 
     // Initialize message frame
@@ -34,6 +43,7 @@ void ImuSensor::readAndUpdate() {
     // Lio-Sam might need the IMU data in a different format
     if (!imu.dataReady()) return;
 
+    delay(10); 
     imu.getAGMT();
 
     imu_msg.header.stamp.sec     = millis() / 1000;

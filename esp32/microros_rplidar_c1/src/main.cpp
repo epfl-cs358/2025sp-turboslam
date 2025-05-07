@@ -21,21 +21,25 @@
 #include <std_msgs/msg/int32.h>
 #include "DMS15.h"
 
+#define TEST_IMU         0
+#define TEST_ULTRASONIC  0
+#define TEST_ENCODER     0
+#define TEST_SERVO_DIR   0
+#define TEST_SERVO_LID   1
+
 // Micro-ROS variables
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_publisher_t publisher;
 rcl_node_t node;
 
-// Lidar
-// RplidarC1 lidar;
-
 // IMU
 ImuSensor imuSensor;
 rcl_publisher_t imu_publisher;
+sensor_msgs__msg__Imu imu_msg;
 
 // Ultrasonic sensor
-UltraSonicSensor ultrasonic(12, 14);  
+UltraSonicSensor ultrasonic(25, 12);  
 rcl_publisher_t range_publisher;
 
 // Encoder
@@ -57,6 +61,8 @@ rcl_publisher_t servo_angle_publisher;
 std_msgs__msg__Int32 servo_angle_msg;
 
 rclc_executor_t executor;
+
+QueueHandle_t servoAngleQ;
 
 #define RCCHECK(fn, msg)     { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 #define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
@@ -126,18 +132,6 @@ rcl_ret_t init_ros() {
       printf("rclc_node_init_default error=%d\r\n",ret);
       return ret;
     }
-
-    // Lidar
-    // printf("rclc_publisher_init_default...\r\n");
-    // ret = rclc_publisher_init_default(
-    //     &publisher,
-    //     &node,
-    //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, LaserScan),
-    //     "/scan");  
-    // if (RCL_RET_OK != ret){
-    //     printf("rclc_publisher_init_default error=%d\r\n",ret);
-    //     return ret;        
-    // }
 
     // IMU
     ret = rclc_publisher_init_default(
@@ -218,7 +212,7 @@ rcl_ret_t init_ros() {
     }
 
     // Add subscriptions to executor
-    // Servo dir
+    //Servo dir
     ret = rclc_executor_add_subscription(
         &executor,
         &servo_dir_subscriber,
@@ -245,6 +239,14 @@ rcl_ret_t init_ros() {
     return RCL_RET_OK;
 }
 
+void imuTask(void *parameter);
+void encoderTask(void *parameter);
+void ultrasonicTask(void *parameter);
+void servoLidTask(void *parameter);
+void executorTask(void *parameter);
+void wifiMonitorTask(void *parameter);
+void servoPublisherTask(void *parameter);
+
 // Setup function
 void setup() {
     Serial.begin(115200);  // Initialize Serial for debugging
@@ -254,145 +256,179 @@ void setup() {
       printf("init_ros error. Rebooting ...\r\n");
       esp_restart();
     }
+
+    // if(!servo_dir.begin()) {
+    //     Serial.println("Servo_dir failed to initialize, rebooting...");
+    //     esp_restart();
+    // }
+
+    servoAngleQ = xQueueCreate(1, sizeof(int));
+
+    #if TEST_IMU
+        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 1, NULL, 1);
+        if (imuTaskCreated != pdPASS) {
+            Serial.println("Failed to create IMU Task");
+            esp_restart();
+        }
+        if (!imuSensor.begin()) {
+            Serial.println("IMU failed to initialize, rebooting...");
+            esp_restart();
+        }
+    #endif
+
+    #if TEST_ENCODER
+        BaseType_t encoderTaskCreated = xTaskCreatePinnedToCore(encoderTask, "Encoder Task", 4096, NULL, 1, NULL, 1);
+        if (encoderTaskCreated != pdPASS) {
+            Serial.println("Failed to create Encoder Task");
+            esp_restart();
+        }
+        if (!encoder.begin()) {
+            Serial.println("Encoder failed to initialize, rebooting...");
+            esp_restart();
+        }
+    #endif
+
+    #if TEST_ULTRASONIC
+        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 1, NULL, 1); 
+        if (ultrasonicTaskCreated != pdPASS) {
+            Serial.println("Failed to create Ultrasonic Task");
+            esp_restart();
+        }
+        if (!ultrasonic.begin()) {
+            Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
+            esp_restart();
+        }
+    #endif
     
-    // lidar.begin();
-    // delay(1000);
-    // lidar.resetLidar();
-    // delay(800);
-    // lidar.startLidar();
+    #if TEST_SERVO_LID
+        BaseType_t servoLidTaskCreated = xTaskCreatePinnedToCore(servoLidTask, "Servo Lid Task", 4096, NULL, 3, NULL, 1);
+        if (servoLidTaskCreated != pdPASS) {
+            Serial.println("Failed to create Servo Lid Task");
+            esp_restart();
+        }
+        if(!servo_lid.begin()) {
+            Serial.println("Servo_lib failed to initialize, rebooting...");
+            esp_restart();
+        }
+    #endif
 
-    if (!imuSensor.begin()) {
-        Serial.println("IMU failed to initialize, rebooting...");
+    BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 4096, NULL, 1, NULL, 0);
+    if (servoTaskCreated != pdPASS) {
+        Serial.println("Failed to create Servo Publisher Task");
         esp_restart();
     }
 
-    if (!ultrasonic.begin()) {
-        Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
+    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 2, NULL, 0);  // Higher priority
+    if (executorTaskCreated != pdPASS) {
+        Serial.println("Failed to create Executor Task");
         esp_restart();
     }
-
-    if (!encoder.begin()) {
-        Serial.println("Encoder failed to initialize, rebooting...");
-        esp_restart();
-    }
-
-    if(!servo_dir.begin()) {
-        Serial.println("Servo_dir failed to initialize, rebooting...");
-        esp_restart();
-    }
-
-    if(!servo_lid.begin()) {
-        Serial.println("Servo_lib failed to initialize, rebooting...");
+    BaseType_t wifiMonitorTaskCreated = xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 2048, NULL, 1, NULL, 1);
+    if (wifiMonitorTaskCreated != pdPASS) {
+        Serial.println("Failed to create WiFi Monitor Task");
         esp_restart();
     }
 }
 
-//rcl_ret_t ret;
-int main_loop_count = 0;
-unsigned long mil = 0L;
-unsigned long total_loop_time = 0L;
-float loop_period = 0.0;
-// int loop_count = 0;
-
-// void loop_simple() {
-//     int count = lidar.uartRx();
-//     Serial.printf("got %d points\r\n", count);
-//     //lidar.processFrame(count);
-// }
-
-void loop() {
-    // Check Wi-Fi connection
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Wi-Fi disconnected, reconnecting...");
-        connect_wifi();
-    }
-
-    // unsigned long uart_elapsed = millis();
-    // int count = lidar.uartRx();
-    // uart_elapsed = millis() - uart_elapsed;
-
-    // unsigned long process_elapsed = millis();
-    // lidar.processFrame(count);
-    // process_elapsed = millis()-process_elapsed;
-
-    // unsigned long publish_elapsed = millis();
-    // rcl_ret_t ret_pub = rcl_publish(&publisher, &lidar.scan_msg, NULL);
-    // publish_elapsed = millis() - publish_elapsed;
-
-    // if(ret_pub != RCL_RET_OK){
-    //     printf("rcl_publish returned %d\r\n", ret_pub);
-    //     esp_restart();
-    // }
-
-    // calculate loop period  
-    // total_loop_time = millis()-total_loop_time;
-    // float total_loop_time_f = (float) total_loop_time;
-    // loop_period = loop_period*0.9 + total_loop_time_f*0.1;
-    
-    // Serial.printf("got %d points in %lu ms. Frame Processing in %lu. Frame publishing in %lu. Total loop in %lu ms. Freq=%.1f Hz Serial2.available=%d\r\n",
-    //     count, uart_elapsed, process_elapsed, publish_elapsed, total_loop_time, 1000.0/loop_period, Serial2.available() );
-    // total_loop_time = millis();
-
-    // Publish IMU data
-    imuSensor.readAndUpdate();
-    rcl_ret_t ret_imu = rcl_publish(&imu_publisher, &imu_msg, NULL);
-    if (ret_imu != RCL_RET_OK) {    // Publish IMU data
+void imuTask(void *parameter) {
+    while (true) {
         imuSensor.readAndUpdate();
-        rcl_ret_t ret_imu = rcl_publish(&imu_publisher, &imu_msg, NULL);
-        if (ret_imu != RCL_RET_OK) {
-            printf("rcl_publish IMU error=%d\r\n", ret_imu);
+        rcl_ret_t ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
+        if (ret != RCL_RET_OK) {
+            printf("rcl_publish IMU error=%d\r\n", ret);
         }
-    
-        //US data
+        vTaskDelay(pdMS_TO_TICKS(10));  // 100 Hz
+    }
+    uxTaskGetStackHighWaterMark(NULL);
+}
+
+void encoderTask(void *parameter) {
+    while (true) {
+        encoder.update();
+        rcl_ret_t ret = rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
+        if (ret != RCL_RET_OK) {
+            printf("rcl_publish encoder error=%d\r\n", ret);
+        }
+        vTaskDelay(pdMS_TO_TICKS(20));  // 50 Hz
+    }
+    uxTaskGetStackHighWaterMark(NULL);
+}
+
+void ultrasonicTask(void *parameter) {
+    while (true) {
         float dist = ultrasonic.readDistance();
         if (dist > 0) {
             ultrasonic.range_msg.range = dist;
             ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
             ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
-            rcl_ret_t ret_range = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
-            if (ret_range != RCL_RET_OK) {
-                printf("rcl_publish range error=%d\r\n", ret_range);
+            rcl_ret_t ret = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
+            if (ret != RCL_RET_OK) {
+                printf("rcl_publish ultrasonic error=%d\r\n", ret);
             }
         }
+        vTaskDelay(pdMS_TO_TICKS(50)); // 20Hz
     }
-
-    // Encoder data
-    encoder.update();
-    rcl_ret_t ret_range = rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
-    if (ret_range != RCL_RET_OK) {
-        printf("rcl_publish encoder error=%d\r\n", ret_range);
-    }
-    printf("rcl_publish IMU error=%d\r\n", ret_imu);
-
-    //US data
-    float dist = ultrasonic.readDistance();
-    if (dist > 0) {
-        ultrasonic.range_msg.range = dist;
-        ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
-        ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
-        rcl_ret_t ret_range = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
-        if (ret_range != RCL_RET_OK) {
-            printf("rcl_publish range error=%d\r\n", ret_range);
-        }
-    }
-
-    // Encoder data
-    encoder.update();
-    ret_range = rcl_publish(&encoder_publisher, &encoder.angle_msg, NULL);
-    if (ret_range != RCL_RET_OK) {
-        printf("rcl_publish encoder error=%d\r\n", ret_range);
-    }
-
-    // Servo_lid tilting call
-    servo_lid.tiltLidar(70, 110, 4000);
-    servo_angle_msg.data = servo_lid.getAngle();
-    ret_range = rcl_publish(&servo_angle_publisher, &servo_angle_msg, NULL);
-    if (ret_range != RCL_RET_OK) {
-        printf("rcl_publish servo_lid error=%d\r\n", ret_range);
-    }
-
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-
-    delay(30);
+    uxTaskGetStackHighWaterMark(NULL);
 }
+
+void servoLidTask(void *parameter) {
+    const TickType_t period = pdMS_TO_TICKS(20);
+    TickType_t lastWake = xTaskGetTickCount();
+  
+    while (true) {
+      // compute next angle
+      servo_lid.tiltLidar(70, 110, 1000);
+      int angle = servo_lid.getAngle();
+  
+      xQueueOverwrite(servoAngleQ, &angle);
+      vTaskDelayUntil(&lastWake, period);
+    }
+}
+
+void servoPublisherTask(void *parameter) {
+    std_msgs__msg__Int32 msg;
+    int angle = 0;
+    const TickType_t period = pdMS_TO_TICKS(50);
+    TickType_t lastWake = xTaskGetTickCount();
+
+    while (true) {
+        int latest;
+        if (xQueuePeek(servoAngleQ, &latest, 0) == pdTRUE) {
+            angle = latest;
+        }
+        msg.data = angle;
+        rcl_ret_t ret = rcl_publish(&servo_angle_publisher, &msg, nullptr);
+        if (ret != RCL_RET_OK) {
+            printf("rcl_publish servo_lid error=%d\r\n", ret);
+        }
+
+        vTaskDelayUntil(&lastWake, period);
+    }
+    uxTaskGetStackHighWaterMark(NULL);
+}
+
+void executorTask(void *parameter) {
+    while (true) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(2));
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
+
+void wifiMonitorTask(void *parameter) {
+    while (true) {
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("Wi-Fi disconnected, reconnecting...");
+            connect_wifi();
+        }
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+    uxTaskGetStackHighWaterMark(NULL);
+}
+
+void loop() {
+    // Empty loop
+}
+
+
+
 
