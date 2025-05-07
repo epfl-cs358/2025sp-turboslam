@@ -1,6 +1,6 @@
 #include "Arduino.h"
 
-#include "sl_lidar.h"
+#include "sl_lidar_esp32.h"
 #include <algorithm>
 
 void receiveScan(void *params);
