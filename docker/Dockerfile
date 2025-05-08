@@ -1,5 +1,5 @@
 # Use the official ROS 2 Humble base image on Ubuntu Jammy
-FROM ros:humble-ros-base-jammy
+FROM ros:humble
 
 # Use bash for RUN commands to allow sourcing
 SHELL ["/bin/bash", "-lc"]
@@ -8,7 +8,7 @@ SHELL ["/bin/bash", "-lc"]
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install build tools, micro-ROS dependencies, PlatformIO, and utilities
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     python3-colcon-common-extensions \
     ros-dev-tools \
     python3-vcstool \
