@@ -27,6 +27,11 @@
 #define TEST_SERVO_DIR   0
 #define TEST_SERVO_LID   1
 
+// Motor pins
+const int motorPin1 = 5;
+const int motorPin2 = 18;
+const int enablePin = 19;
+
 // Micro-ROS variables
 rcl_allocator_t allocator;
 rclc_support_t support;
@@ -46,12 +51,13 @@ rcl_publisher_t range_publisher;
 AS5600Encoder encoder;
 rcl_publisher_t encoder_publisher;
 
+
 //Servo
 //To test run : $ ros2 topic pub /servo_lid/angle std_msgs/msg/Int32 "{data: 90}" 
 DMS15 servo_dir(26); // servo used for the direcition of the car
 rcl_subscription_t servo_dir_subscriber;
 std_msgs__msg__Int32 servo_dir_angle_msg;
- 
+
 DMS15 servo_lid(27); // servo used for tilting the lidar
 rcl_subscription_t servo_lid_subscriber;
 std_msgs__msg__Int32 servo_lid_angle_msg;
@@ -66,6 +72,8 @@ QueueHandle_t servoAngleQ;
 
 #define RCCHECK(fn, msg)     { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 #define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
+
+
 
 void connect_wifi(){
     WiFi.disconnect(true);   // Reset Wi-Fi
@@ -93,10 +101,29 @@ void servo_lid_callback(const void* msgin) {
     Serial.println(msg->data);
 }
 
+void motor_callback(const void *msgin) {
+    auto cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+
+    if (cmd->data == 1) {
+        // forward
+        digitalWrite(motorPin1, HIGH);
+        digitalWrite(motorPin2, LOW);
+        analogWrite(enablePin, 200);
+      } else if (cmd->data == -1) {
+        // backward
+        digitalWrite(motorPin1, LOW);
+        digitalWrite(motorPin2, HIGH);
+        analogWrite(enablePin, 200);
+      } else {
+        // stop
+        analogWrite(enablePin, 0);
+      }
+}
+
 rcl_ret_t init_ros() {
     // Micro-ROS initialization
     rcl_ret_t ret;
-   
+    
     struct my_micro_ros_agent_locator {
       IPAddress address;
       int port;
@@ -424,6 +451,7 @@ void wifiMonitorTask(void *parameter) {
     }
     uxTaskGetStackHighWaterMark(NULL);
 }
+
 
 void loop() {
     // Empty loop
