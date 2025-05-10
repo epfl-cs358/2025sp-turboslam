@@ -13,10 +13,10 @@ bool checkSLAMTECLIDARHealth(ILidarDriver *drv);
 
 void setup()
 {
-  // const uint8_t rxPin = 27;
-  // const uint8_t txPin = 33;
-  const uint8_t rxPin = 16;
-  const uint8_t txPin = 17;
+  const uint8_t rxPin = 27;
+  const uint8_t txPin = 33;
+  // const uint8_t rxPin = 16;
+  // const uint8_t txPin = 17;
 
   Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, rxPin, txPin);
