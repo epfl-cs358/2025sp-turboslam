@@ -1,13 +1,21 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <micro_ros_platformio.h>
-#include <rcl/rcl.h>
+
+// ROS libraries
+#include <micro_ros_platformio.h> // transport : UDP, Serial, etc
+#include <rcl/rcl.h> // node, publisher, etc
 #include <rclc/rclc.h>
-//#include <rclc/executor.h>
-#include <sensor_msgs/msg/laser_scan.h>
+#include <rclc/executor.h>
+
+// Message Types
+#include <sensor_msgs/msg/laser_scan.h> // for LiDAR
+#include <std_msgs/msg/string.h> // for GPS
 
 #include "credentials.h"
 #include "RplidarC1.h"
+#include "GPS_NEO6M.h"
+
+
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -19,6 +27,7 @@ rcl_node_t node;
 #define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 
 RplidarC1 lidar;
+GPS_NEO6M gps;
 
 void connect_wifi(){
     WiFi.disconnect(true);   // Reset Wi-Fi
@@ -120,19 +129,25 @@ rcl_ret_t init_ros() {
 void setup() {
     Serial.begin(115200);  // Initialize Serial for debugging
     
+    /*
     connect_wifi();
    
     if( RCL_RET_OK != init_ros()){
       printf("init_ros error. Rebooting ...\r\n");
       esp_restart();
     }
+    */
     
+    // GPS begin
+    gps.begin();
 
+    /*
     lidar.begin();
     delay(1000);
     lidar.resetLidar();
     delay(800);
     lidar.startLidar();
+    */
 }
 
 //rcl_ret_t ret;
@@ -154,12 +169,22 @@ void loop_simple() {
 
 
 void loop() {
+
+    /*
     // Check Wi-Fi connection
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("Wi-Fi disconnected, reconnecting...");
         connect_wifi();
     }
+    */
 
+    gps.read();
+    if (gps.isValid()) {
+        Serial.printf("lat = %.4f, lng = %.4f\n", gps.latitude(), gps.longitude());
+    }
+
+
+    /*
     unsigned long uart_elapsed = millis();
     int count = lidar.uartRx();
     uart_elapsed = millis() - uart_elapsed;
@@ -185,7 +210,8 @@ void loop() {
     Serial.printf("got %d points in %lu ms. Frame Processing in %lu. Frame publishing in %lu. Total loop in %lu ms. Freq=%.1f Hz Serial2.available=%d\r\n",
         count, uart_elapsed, process_elapsed, publish_elapsed, total_loop_time, 1000.0/loop_period, Serial2.available() );
     total_loop_time = millis();
+    */
 
-    delay(30);
+    delay(500);
 }
 
