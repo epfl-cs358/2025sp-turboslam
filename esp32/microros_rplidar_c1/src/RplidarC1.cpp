@@ -6,8 +6,11 @@ RplidarC1::RplidarC1()
 
 void RplidarC1::begin()
 {
-    Serial2.setRxBufferSize(8000);
-    Serial2.begin(460800, SERIAL_8N1, 16, 17); // Serial2.begin(baud-rate, protocol, RX pin, TX pin);
+    const int rxPin = 18;
+    const int txPin = 17;
+
+    Serial1.setRxBufferSize(8000);
+    Serial1.begin(460800, SERIAL_8N1, rxPin, txPin); // Serial1.begin(baud-rate, protocol, RX pin, TX pin);
     // Initialize LaserScan message
     scan_msg.header.frame_id.data = (char *)"laser_frame";
     scan_msg.header.frame_id.size = strlen(scan_msg.header.frame_id.data);
@@ -28,7 +31,7 @@ void RplidarC1::setMotorPWM(uint16_t pwm)
     cmd[1] = 0xF0;
     cmd[2] = pwm & 0xFF;
     cmd[3] = pwm >> 8;
-    Serial2.write(cmd, sizeof(cmd));
+    Serial1.write(cmd, sizeof(cmd));
     // give the motor controller a moment to adjust
     delay(50);
     Serial.printf("Motor PWM set to %u\r\n", pwm);
@@ -37,7 +40,7 @@ void RplidarC1::setMotorPWM(uint16_t pwm)
 void RplidarC1::resetLidar()
 {
     uint8_t resetCommand[] = {0xA5, 0x40};
-    Serial2.write(resetCommand, sizeof(resetCommand));
+    Serial1.write(resetCommand, sizeof(resetCommand));
     Serial.println("LIDAR reset command sent");
 }
 
@@ -45,12 +48,12 @@ void RplidarC1::startLidar()
 {
     // choose your desired scan-rate here:
     //   ~330 → ~10 Hz, ~500 → ~15 Hz, ~660 → ~20 Hz, etc.
-    setMotorPWM(660);
+    // setMotorPWM(660);
 
     // now issue the normal “start scan” command
 
     uint8_t startCommand[] = {0xA5, 0x20};
-    Serial2.write(startCommand, sizeof(startCommand));
+    Serial1.write(startCommand, sizeof(startCommand));
     Serial.println("LIDAR start command sent");
 }
 
@@ -65,19 +68,19 @@ int RplidarC1::uartRx()
     {
         if (!pointAlign)
         {
-            // while (Serial2.available() > 10)
-            //      Serial2.read();
-            //  if(Serial2.available() < 5 ){
+            // while (Serial1.available() > 10)
+            //      Serial1.read();
+            //  if(Serial1.available() < 5 ){
             //      return 0; //continue;
             //  }
-            byte = Serial2.read();
+            byte = Serial1.read();
             if ((byte & 0x11) != 0x10)
                 continue;
-            byte = Serial2.read();
+            byte = Serial1.read();
             if ((byte & 0x1) != 0x1)
                 continue;
             for (int i = 0; i < 3; i++)
-                byte = Serial2.read(); // read 3rd 4th and 5th byte of this point
+                byte = Serial1.read(); // read 3rd 4th and 5th byte of this point
             pointAlign = true;
             dataIndex = 0;
             printf("%lu point alignment\r\n", millis());
@@ -85,9 +88,9 @@ int RplidarC1::uartRx()
         }
         if (!frameActive)
         {
-            if (Serial2.available() < 10)
+            if (Serial1.available() < 10)
                 continue;
-            Serial2.read(DataBuffer, 5);
+            Serial1.read(DataBuffer, 5);
             auto *point = (stScanDataPoint_t *)DataBuffer;
             if ((point->quality & 0x01) && !(point->quality & 0x02) && (point->angle_low & 0x01))
             {
@@ -98,9 +101,9 @@ int RplidarC1::uartRx()
         }
         // we are point aligned and frameAligned
         // read 5 bytes
-        if (Serial2.available() < 10)
+        if (Serial1.available() < 10)
             continue;
-        Serial2.read(DataBuffer + dataIndex, 5);
+        Serial1.read(DataBuffer + dataIndex, 5);
         auto *point = (stScanDataPoint_t *)(DataBuffer + dataIndex);
         if ((point->quality & 0x01) && !(point->quality & 0x02) && (point->angle_low & 0x01))
         {
