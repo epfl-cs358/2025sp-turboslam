@@ -19,10 +19,10 @@ class RplidarC1
 public:
     RplidarC1();
     void begin();
-    /// Set the onboard motor controller’s PWM duty.
-    /// pwm duty is a 16-bit value (0–1023 nominal),
-    /// e.g. ~330 for ≈10 Hz, ~660 for ≈20 Hz.
-    void setMotorPWM(uint16_t pwm);
+    // /// Set the onboard motor controller’s PWM duty.
+    // /// pwm duty is a 16-bit value (0–1023 nominal),
+    // /// e.g. ~330 for ≈10 Hz, ~660 for ≈20 Hz.
+    // void setMotorPWM(uint16_t pwm);
     void resetLidar();
     void startLidar();
     int uartRx();

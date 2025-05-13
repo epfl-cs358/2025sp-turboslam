@@ -23,19 +23,19 @@ void RplidarC1::begin()
     scan_msg.range_max = MAX_RANGE;
 }
 
-void RplidarC1::setMotorPWM(uint16_t pwm)
-{
-    // [0xA5, 0xF0, PWM_L, PWM_H]
-    uint8_t cmd[4];
-    cmd[0] = 0xA5;
-    cmd[1] = 0xF0;
-    cmd[2] = pwm & 0xFF;
-    cmd[3] = pwm >> 8;
-    Serial2.write(cmd, sizeof(cmd));
-    // give the motor controller a moment to adjust
-    delay(50);
-    Serial.printf("Motor PWM set to %u\r\n", pwm);
-}
+// void RplidarC1::setMotorPWM(uint16_t pwm)
+// {
+//     // [0xA5, 0xF0, PWM_L, PWM_H]
+//     uint8_t cmd[4];
+//     cmd[0] = 0xA5;
+//     cmd[1] = 0xF0;
+//     cmd[2] = pwm & 0xFF;
+//     cmd[3] = pwm >> 8;
+//     Serial2.write(cmd, sizeof(cmd));
+//     // give the motor controller a moment to adjust
+//     delay(50);
+//     Serial.printf("Motor PWM set to %u\r\n", pwm);
+// }
 
 void RplidarC1::resetLidar()
 {

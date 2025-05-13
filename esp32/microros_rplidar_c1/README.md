@@ -1,4 +1,4 @@
-This is a fork of https://github.com/guido57/ESP32_RPLIDAR_C1_ROS but that uses the original SLAMTEC library (ported to ESP32, source: https://github.com/gfvalvo/SlamtecLidarESP32/tree/main).
+This is a fork of https://github.com/guido57/ESP32_RPLIDAR_C1_ROS.
 
 IMPORTANT FOR SUCESSFUL BUILD:
 
@@ -53,6 +53,14 @@ You can listen to the /scan topic with:
 ```bash
 ros2 topic echo /scan
 ```
+
+## Vizualisation
+
+```bash
+ros2 run rviz2 rviz2
+```
+
+Add a `LaserScan` display and set the topic to `/scan`. In global options, set frame to `laser_frame`.
 
 # OVERVIEW
 
