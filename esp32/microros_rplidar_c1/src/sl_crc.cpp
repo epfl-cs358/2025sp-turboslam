@@ -78,8 +78,7 @@ namespace sl {namespace crc32 {
         sl_u8 index;
         sl_u8* pch;
         pch = (unsigned char*)input;
-        //sl_u8 leftBytes = 4 - len & 0x3;
-        sl_u8 leftBytes = (4 - len) & 0x3;
+        sl_u8 leftBytes = 4 - (len & 0x3); // TODO: is it (4 - len) & 0x3 or this ?
 
         for (i = 0; i < len; i++) {
             index = (unsigned char)(crc^*pch);
