@@ -8,6 +8,9 @@
 #include <rclc/executor.h>
 #include <sensor_msgs/msg/laser_scan.h>
 #include <sensor_msgs/msg/imu.h>
+#include <std_msgs/msg/int8.h>
+
+#include "MotorController.h"
 
 #include "credentials.h"
 //#include "RplidarC1.h"
@@ -25,13 +28,24 @@
 #define TEST_ULTRASONIC  0
 #define TEST_ENCODER     0
 #define TEST_SERVO_DIR   0
-#define TEST_SERVO_LID   1
+#define TEST_SERVO_LID   0
+
+// Motor pins
+const int motorPin1 = 5;
+const int motorPin2 = 18;
+const int enablePin = 19;
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_publisher_t publisher;
 rcl_node_t node;
+
+rcl_subscription_t motor_cmd_subscriber;
+std_msgs__msg__Int8 motor_cmd_msg;
+
+// Motor controller
+MotorController motor(motorPin1, motorPin2, enablePin);
 
 // IMU
 ImuSensor imuSensor;
@@ -91,6 +105,26 @@ void servo_lid_callback(const void* msgin) {
     servo_lid.setAngle(msg->data);
     Serial.print("Received angle: ");
     Serial.println(msg->data);
+}
+
+// Motor callback
+void motor_callback(const void * msgin) {
+    auto cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+//   if (cmd->data ==  1) {
+//     digitalWrite(motorPin1, HIGH);
+//     digitalWrite(motorPin2, LOW);
+//     analogWrite(enablePin, 200);
+//   } else if (cmd->data == -1) {
+//     digitalWrite(motorPin1, LOW);
+//     digitalWrite(motorPin2, HIGH);
+//     analogWrite(enablePin, 200);
+//   } else {
+//     analogWrite(enablePin, 0);
+//   }
+//   Serial.printf("Motor cmd: %d → setting pins %d/%d enable=%d\n",
+//               cmd->data, motorPin1, motorPin2, enablePin);
+    motor.command(cmd->data, 200);
+    Serial.printf("Motor cmd: %d\n", cmd->data);
 }
 
 rcl_ret_t init_ros() {
@@ -205,7 +239,7 @@ rcl_ret_t init_ros() {
         esp_restart();
     }
 
-    ret = rclc_executor_init(&executor, &support.context, 2, &allocator);  // 2 = number of handles (subscribers)
+    ret = rclc_executor_init(&executor, &support.context, 3, &allocator);  // 2 = number of handles (subscribers)
     if (ret != RCL_RET_OK) {
         Serial.println("Failed to initialize executor");
         return ret;
@@ -235,6 +269,45 @@ rcl_ret_t init_ros() {
         printf("Failed to add servo_lid callback to executor: %d\n", ret);
         return ret;
     }
+
+    // Motor control subscriber
+    // ret = rclc_subscription_init_default(
+    //     &motor_cmd_subscriber, 
+    //     &node, 
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int8),
+    //     "/motor_cmd");
+    // if (ret != RCL_RET_OK) {
+    //     printf("Failed to create motor command subscriber");
+    //     return ret;
+    // }
+
+    RCCHECK(
+        rclc_subscription_init_default(
+            &motor_cmd_subscriber,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int8),
+            "/motor_cmd"),
+        "Failed to create motor command subscriber");
+
+    // Add it to the executor
+    // ret = rclc_executor_add_subscription(
+    //     &executor,
+    //     &motor_cmd_subscriber,
+    //     &motor_cmd_msg,
+    //     &motor_callback,
+    //     ON_NEW_DATA);
+    // if (ret != RCL_RET_OK) {
+    //     printf("Failed to add motor callback to executor: %d\n", ret);
+    //     return ret;
+    // }
+    RCCHECK(
+        rclc_executor_add_subscription(
+            &executor,
+            &motor_cmd_subscriber,
+            &motor_cmd_msg,
+            &motor_callback,
+            ON_NEW_DATA),
+        "Failed to add motor callback to executor");
   
     return RCL_RET_OK;
 }
@@ -251,10 +324,24 @@ void servoPublisherTask(void *parameter);
 void setup() {
     Serial.begin(115200);  // Initialize Serial for debugging
     connect_wifi();
+    Serial.printf("Free heap: %d\n", esp_get_free_heap_size());
+
+    // pinMode(motorPin1, OUTPUT);
+    // pinMode(motorPin2, OUTPUT);
+    // pinMode(enablePin, OUTPUT);
+    // // int init_ros_ret = init_ros();
+    if (!motor.begin()) {
+        Serial.println("Motor failed to initialize, rebooting...");
+        esp_restart();
+    }
+
+
    
-    if(RCL_RET_OK != init_ros()){
-      printf("init_ros error. Rebooting ...\r\n");
-      esp_restart();
+    if (RCL_RET_OK != init_ros()) {
+        printf("init_ros failed. Rebooting ...\r\n");
+        esp_restart();
+    } else {
+        Serial.println("init_ros succeeded");
     }
 
     // if(!servo_dir.begin()) {
