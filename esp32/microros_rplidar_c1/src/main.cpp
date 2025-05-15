@@ -8,9 +8,9 @@
 #include <rclc/executor.h>
 #include <sensor_msgs/msg/laser_scan.h>
 #include <sensor_msgs/msg/imu.h>
+#include <sensor_msgs/msg/nav_sat_fix.h>
 #include <std_msgs/msg/int32.h>
 #include "I2C_mutex.h"
-//#include "custom_imu_msgs/msg/light_imu.h"
 
 #include "credentials.h"
 #include "I2C_wire.h"
@@ -20,14 +20,15 @@
 #include "AS5600Encoder.h"
 #include "DMS15.h"
 //#include "BrushedMotor.h"
+#include "NEO6M.h" 
 
-#define TEST_IMU 1
-#define TEST_ULTRASONIC 1
-#define TEST_ENCODER 1
+#define TEST_IMU 0
+#define TEST_ULTRASONIC 0
+#define TEST_ENCODER 0
 #define TEST_SERVO_DIR 0
 #define TEST_SERVO_LID 0
 #define TEST_MOTOR 0
-#define TEST_GPS 0
+#define TEST_GPS 1
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -64,9 +65,9 @@ SemaphoreHandle_t ros_publish_mutex;
 QueueHandle_t servoAngleQ;
 
 // gps
-// NEO6M gps(Serial2, 9600, 16, 17);  // RX=16, TX=17 (adjust to your wiring)
-// rcl_publisher_t gps_publisher;
-// sensor_msgs__msg__NavSatFix gps_msg;
+NEO6M gps(Serial2, 9600, 16, 17);  // RX=16, TX=17 (adjust to your wiring)
+rcl_publisher_t gps_publisher;
+sensor_msgs__msg__NavSatFix gps_msg;
 
 SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();
 
@@ -184,16 +185,16 @@ rcl_ret_t init_ros() {
     }
 
     // GPS
-    // ret = rclc_publisher_init_default(
-    //     &gps_publisher,
-    //     &node,
-    //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, NavSatFix),
-    //     "/gps/fix"
-    // );
-    // if (ret != RCL_RET_OK) {
-    //     printf("gps publisher init failed: %d\n", ret);
-    //     return ret;
-    // }
+    ret = rclc_publisher_init_default(
+        &gps_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, NavSatFix),
+        "/gps/fix"
+    );
+    if (ret != RCL_RET_OK) {
+        printf("gps publisher init failed: %d\n", ret);
+        return ret;
+    }
 
     // Servo_lid puvlisher to get the angle
     ret = rclc_publisher_init_default(
@@ -243,6 +244,7 @@ rcl_ret_t init_ros() {
         Serial.println("Failed to initialize executor");
         return ret;
     }
+    
     // Add subscriptions to executor
     //Servo dir
     ret = rclc_executor_add_subscription(
@@ -291,12 +293,13 @@ void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
 void motorTask(void *parameter);
+void gpsTask(void *parameter);
 
 // Setup function
 void setup() {
-    Serial.begin(115200); // Initialize Serial for debugging
+    Serial.begin(115200);
     Serial.println("Starting up...");
-    I2C_wire.begin(8, 9); // Initialize I2C on pins 21 (SDA) and 22 (SCL)
+    I2C_wire.begin(8, 9);
     connect_wifi();
     if(RCL_RET_OK != init_ros()){
         printf("init_ros error. Rebooting ...\r\n");
@@ -367,13 +370,25 @@ void setup() {
         }
     #endif
 
+    #if TEST_GPS
+        if (!gps.begin()) {
+            Serial.println("GPS init failed!");
+            esp_restart();
+        }
+        BaseType_t gpsTaskCreated = xTaskCreatePinnedToCore(gpsTask, "GPS Task", 4096, NULL, 1, NULL, 0);
+        if (gpsTaskCreated != pdPASS) {
+            Serial.println("Failed to create GPS Task");
+            esp_restart();
+        }
+    #endif
+
     // BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 4096, NULL, 1, NULL, 0);
     // if (servoTaskCreated != pdPASS) {
     // Serial.println("Failed to create Servo Publisher Task");
     // esp_restart();
     // }
 
-    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 2, NULL, 0); // Higher priority
+    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 2, NULL, 1); // Higher priority
     if (executorTaskCreated != pdPASS) {
         Serial.println("Failed to create Executor Task");
         esp_restart();
@@ -492,6 +507,21 @@ void wifiMonitorTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
     uxTaskGetStackHighWaterMark(NULL);
+}
+
+void gpsTask(void*) {
+    while (true) {
+        if (gps.read()) {
+            gps_msg.header.stamp.sec = millis() / 1000;
+            gps_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+            gps.populateNavSatFix(gps_msg);
+            rcl_ret_t ret = rcl_publish(&gps_publisher, &gps_msg, nullptr);
+            if (ret != RCL_RET_OK) {
+                printf("rclc_executor_spin_some error=%d\r\n", ret);
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10 Hz
+    } 
 }
 
 // void motorControlTask(void *arg) {

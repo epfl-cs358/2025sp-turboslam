@@ -11,29 +11,26 @@ bool AS5600Encoder::begin() {
             Serial.println(address, HEX);
         }
     }
-
     return true;
 }
 
 uint16_t AS5600Encoder::getRawAngle() {
 
     if (xSemaphoreTake(i2c_mutex, pdMS_TO_TICKS(50)) != pdTRUE) {
-        return 0xFFFF; // Failed to acquire I2C mutex
+        return 0xFFFF; 
     }
-
 
     I2C_wire.beginTransmission(AS5600_ADDR);
     I2C_wire.write(RAW_ANGLE_REG);
     if (I2C_wire.endTransmission(false) != 0) {
         xSemaphoreGive(i2c_mutex);
-        return 0xFFFF; // Communication error
+        return 0xFFFF; 
     }
 
     if (I2C_wire.requestFrom(AS5600_ADDR, (uint8_t)2) != 2) {
         xSemaphoreGive(i2c_mutex);
-        return 0xFFFF; // Not enough bytes received
+        return 0xFFFF; 
     }
-
 
     uint8_t msb = I2C_wire.read();
     uint8_t lsb = I2C_wire.read();
@@ -48,9 +45,9 @@ std_msgs__msg__Int32 AS5600Encoder::update() {
 
     if (raw != 0xFFFF) {
         float angle_deg = (raw * 360.0f) / 4096.0f;
-        msg.data = static_cast<int32_t>(angle_deg);  // Optionally scale ×1000 if you need precision
+        msg.data = static_cast<int32_t>(angle_deg);  
     } else {
-        msg.data = -1; // Error code (you can use -1 to indicate failure)
+        msg.data = -1;
     }
 
     return msg;

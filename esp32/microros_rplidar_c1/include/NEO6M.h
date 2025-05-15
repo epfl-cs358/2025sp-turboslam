@@ -1,29 +1,23 @@
-// #ifndef NEO6M_H
-// #define NEO6M_H
+#ifndef NEO6M_H
+#define NEO6M_H
 
-// #include <Arduino.h>
-// #include <TinyGPS++.h>
+#include <Arduino.h>
+#include <TinyGPSPlus.h>
+#include <sensor_msgs/msg/nav_sat_fix.h>
+#include <rcl/rcl.h>
 
-// class NEO6M {
-// public:
-//   NEO6M(HardwareSerial &ser, uint32_t baud, int8_t rxPin, int8_t txPin);
+class NEO6M {
+public:
+  NEO6M(HardwareSerial &ser, uint32_t baud, int8_t rxPin, int8_t txPin);
+  bool begin();
+  bool read();
+  void populateNavSatFix(sensor_msgs__msg__NavSatFix &msg);
 
-//   /// Initialize serial port. Call once in setup()
-//   bool begin();
+private:
+  HardwareSerial &gpsSerial;
+  TinyGPSPlus    gps;
+  uint32_t       baud;
+  int8_t         rxPin, txPin;
+};
 
-//   /// Call in a loop to feed parser; returns true if a new fix is available
-//   bool read();
-
-//   /// After read() returns true, these accessors hold the latest fix
-//   double latitude() const;
-//   double longitude() const;
-//   double altitude() const;  // meters
-
-// private:
-//   HardwareSerial &gpsSerial;
-//   const uint32_t baudRate;
-//   const int8_t rxPin, txPin;
-//   TinyGPSPlus gps;
-// };
-
-// #endif // NEO6M_H
+#endif 

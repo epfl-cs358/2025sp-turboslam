@@ -8,7 +8,7 @@
 class AS5600Encoder {
     public:
         bool begin();
-        std_msgs__msg__Int32 update();  // returns the angle as a ROS Int32 message
+        std_msgs__msg__Int32 update(); 
 
     private:
         const uint8_t AS5600_ADDR = 0x36;

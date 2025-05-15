@@ -1,9 +1,6 @@
 #include <ImuSensor.h>
 #include <Wire.h>
 #include <I2C_wire.h>
-//#include "custom_imu_msgs/msg/light_imu.h"
-
-//custom_imu_msgs__msg__LightImu imu_msg;
 
 sensor_msgs__msg__Imu imu_msg;
 bool ImuSensor::begin() {
@@ -16,8 +13,9 @@ bool ImuSensor::begin() {
       Serial.println(address, HEX);
     }
   }
+  Serial.println("I2C Scanner imu done");
 
-  if (!bno086.begin_I2C(0x4B, &I2C_wire)) { // Default I2C address is 0x4A or 0x4B
+  if (!bno086.begin_I2C(0x4B, &I2C_wire)) { 
     Serial.println("Failed to initialize BNO08x!");
     return false;
   }
@@ -36,7 +34,6 @@ bool ImuSensor::begin() {
 }
 
 bool ImuSensor::configureSensor() {
-  // Enable important reports
   return bno086.enableReport(SH2_ROTATION_VECTOR, 400) &&
   bno086.enableReport(SH2_LINEAR_ACCELERATION, 400) &&
   bno086.enableReport(SH2_GYROSCOPE_UNCALIBRATED, 400);

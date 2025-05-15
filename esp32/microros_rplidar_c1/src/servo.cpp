@@ -6,7 +6,7 @@ DMS15::DMS15(int pin) : servoPin(pin) {}
 bool DMS15::begin() {
     servo.attach(servoPin);
     Serial.printf("Servo attached to pin %d\n", servoPin);
-    servo.write(110);  // Set initial angle to 90 degrees
+    servo.write(110); 
     return servo.attached(); 
 }
 
