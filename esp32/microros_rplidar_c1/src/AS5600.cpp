@@ -1,23 +1,57 @@
 #include "AS5600Encoder.h"
-#include <Wire.h>
-TwoWire wire = TwoWire(1);
-AS5600 AS5600Wire(&wire);
-
-AS5600Encoder::AS5600Encoder() {
-    angle_msg.data = 0;
-}
+#include "I2C_mutex.h"
+#include "I2C_wire.h"
 
 bool AS5600Encoder::begin() {
-    wire.begin(21, 22); 
-    if (!encoder.begin(4)) {
-        Serial.println("Failed to initialize AS5600");
-        return false;
+    Serial.println("\nI2C Scanner");
+    for (byte address = 1; address < 127; address++) {
+        I2C_wire.beginTransmission(address);
+        if (I2C_wire.endTransmission() == 0) {
+            Serial.print("I2C device found at address 0x");
+            Serial.println(address, HEX);
+        }
     }
-    encoder.setDirection(AS5600_CLOCK_WISE);
-    angle_msg.data = 0;
+
     return true;
 }
 
-void AS5600Encoder::update() {  
-    angle_msg.data = encoder.rawAngle();
+uint16_t AS5600Encoder::getRawAngle() {
+
+    if (xSemaphoreTake(i2c_mutex, pdMS_TO_TICKS(50)) != pdTRUE) {
+        return 0xFFFF; // Failed to acquire I2C mutex
+    }
+
+
+    I2C_wire.beginTransmission(AS5600_ADDR);
+    I2C_wire.write(RAW_ANGLE_REG);
+    if (I2C_wire.endTransmission(false) != 0) {
+        xSemaphoreGive(i2c_mutex);
+        return 0xFFFF; // Communication error
+    }
+
+    if (I2C_wire.requestFrom(AS5600_ADDR, (uint8_t)2) != 2) {
+        xSemaphoreGive(i2c_mutex);
+        return 0xFFFF; // Not enough bytes received
+    }
+
+
+    uint8_t msb = I2C_wire.read();
+    uint8_t lsb = I2C_wire.read();
+    xSemaphoreGive(i2c_mutex);
+    uint16_t raw = ((uint16_t)msb << 8) | lsb;
+    return raw & 0x0FFF;  
+}
+
+std_msgs__msg__Int32 AS5600Encoder::update() {
+    std_msgs__msg__Int32 msg;
+    uint16_t raw = getRawAngle();
+
+    if (raw != 0xFFFF) {
+        float angle_deg = (raw * 360.0f) / 4096.0f;
+        msg.data = static_cast<int32_t>(angle_deg);  // Optionally scale ×1000 if you need precision
+    } else {
+        msg.data = -1; // Error code (you can use -1 to indicate failure)
+    }
+
+    return msg;
 }
