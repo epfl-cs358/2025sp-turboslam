@@ -22,6 +22,7 @@ rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_publisher_t publisher;
 rcl_node_t node;
+rcl_timer_t gpsTimer;
     
 #define RCCHECK(fn, msg)     { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 #define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
@@ -178,13 +179,17 @@ void loop() {
     }
     */
 
+    // GPS READ
     gps.read();
-    if (gps.isValid()) {
+    //if (gps.isValid()) {
         Serial.printf("lat = %.4f, lng = %.4f\n", gps.latitude(), gps.longitude());
-    }
 
+        Serial.printf("Satellites = ");
+        Serial.println(gps.gps.satellites.value());
+    //}
 
     /*
+    
     unsigned long uart_elapsed = millis();
     int count = lidar.uartRx();
     uart_elapsed = millis() - uart_elapsed;
