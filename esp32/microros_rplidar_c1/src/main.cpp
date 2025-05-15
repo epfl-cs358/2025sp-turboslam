@@ -21,12 +21,13 @@
 #include "DMS15.h"
 //#include "BrushedMotor.h"
 
-#define TEST_IMU 0
-#define TEST_ULTRASONIC 0
-#define TEST_ENCODER 0
+#define TEST_IMU 1
+#define TEST_ULTRASONIC 1
+#define TEST_ENCODER 1
 #define TEST_SERVO_DIR 0
 #define TEST_SERVO_LID 0
 #define TEST_MOTOR 0
+#define TEST_GPS 0
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -37,7 +38,7 @@ rcl_node_t node;
 ImuSensor imuSensor;
 rcl_publisher_t imu_publisher;
 // Ultrasonic sensor
-UltraSonicSensor ultrasonic(25, 12);
+UltraSonicSensor ultrasonic(10, 11);
 rcl_publisher_t range_publisher;
 // Encoder
 AS5600Encoder encoder;
@@ -61,6 +62,11 @@ QueueHandle_t motorThrottleQ;
 rclc_executor_t executor;
 SemaphoreHandle_t ros_publish_mutex;
 QueueHandle_t servoAngleQ;
+
+// gps
+// NEO6M gps(Serial2, 9600, 16, 17);  // RX=16, TX=17 (adjust to your wiring)
+// rcl_publisher_t gps_publisher;
+// sensor_msgs__msg__NavSatFix gps_msg;
 
 SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();
 
@@ -176,6 +182,18 @@ rcl_ret_t init_ros() {
         printf("encoder publisher init failed: %d\n", ret);
         return ret;
     }
+
+    // GPS
+    // ret = rclc_publisher_init_default(
+    //     &gps_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, NavSatFix),
+    //     "/gps/fix"
+    // );
+    // if (ret != RCL_RET_OK) {
+    //     printf("gps publisher init failed: %d\n", ret);
+    //     return ret;
+    // }
 
     // Servo_lid puvlisher to get the angle
     ret = rclc_publisher_init_default(
@@ -298,7 +316,7 @@ void setup() {
             Serial.println("IMU failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 8192, NULL, 2, NULL, 1);
+        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 2, NULL, 1);
         if (imuTaskCreated != pdPASS) {
             Serial.println("Failed to create IMU Task");
             esp_restart();
@@ -310,14 +328,16 @@ void setup() {
             Serial.println("Encoder failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t encoderTaskCreated = xTaskCreatePinnedToCore(encoderTask, "Encoder Task", 4096, NULL, 1, NULL, 1);
+        Serial.println("Encoder initialized");
+        BaseType_t encoderTaskCreated = xTaskCreatePinnedToCore(encoderTask, "Encoder Task", 2048, NULL, 2, NULL, 1);
         if (encoderTaskCreated != pdPASS) {
             Serial.println("Failed to create Encoder Task");
             esp_restart();
         }
     #endif
+
     #if TEST_ULTRASONIC
-        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 1, NULL, 1);
+        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 2, NULL, 1);
         if (ultrasonicTaskCreated != pdPASS) {
             Serial.println("Failed to create Ultrasonic Task");
             esp_restart();
@@ -338,6 +358,7 @@ void setup() {
             esp_restart();
         }
     #endif
+
     #if TEST_MOTOR
         BaseType_t motorTaskCreated = xTaskCreatePinnedToCore(motorTask, "motor_control_task", 4096, NULL, 1, NULL, 1);
         if (motorTaskCreated != pdPASS) {

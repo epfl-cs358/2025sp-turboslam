@@ -8,14 +8,14 @@
 sensor_msgs__msg__Imu imu_msg;
 bool ImuSensor::begin() {
 
-  // Serial.println("\nI2C Scanner");
-  // for (byte address = 1; address < 127; address++) {
-  //   I2C_wire.beginTransmission(address);
-  //   if (I2C_wire.endTransmission() == 0) {
-  //     Serial.print("I2C device found at address 0x");
-  //     Serial.println(address, HEX);
-  //   }
-  // }
+  Serial.println("\nI2C Scanner imu");
+  for (byte address = 1; address < 127; address++) {
+    I2C_wire.beginTransmission(address);
+    if (I2C_wire.endTransmission() == 0) {
+      Serial.print("I2C device found at address 0x");
+      Serial.println(address, HEX);
+    }
+  }
 
   if (!bno086.begin_I2C(0x4B, &I2C_wire)) { // Default I2C address is 0x4A or 0x4B
     Serial.println("Failed to initialize BNO08x!");

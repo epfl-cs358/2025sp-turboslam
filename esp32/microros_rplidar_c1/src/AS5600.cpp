@@ -3,7 +3,7 @@
 #include "I2C_wire.h"
 
 bool AS5600Encoder::begin() {
-    Serial.println("\nI2C Scanner");
+    Serial.println("\nI2C Scanner encoder");
     for (byte address = 1; address < 127; address++) {
         I2C_wire.beginTransmission(address);
         if (I2C_wire.endTransmission() == 0) {
