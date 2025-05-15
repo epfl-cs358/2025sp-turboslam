@@ -1,36 +1,28 @@
 #include "MotorController.h"
 
-MotorController::MotorController(int in1Pin, int in2Pin, int pwmPin)
- : _in1(in1Pin), _in2(in2Pin), _pwm(pwmPin) { }
+MotorController::MotorController(int pwmPin)
+ : _pwm(pwmPin) { }
 
 bool MotorController::begin() {
   // pinMode can fail silently, so we just configure
-  pinMode(_in1, OUTPUT);
-  pinMode(_in2, OUTPUT);
+  ledcSetup(0, 50, 12); 
   pinMode(_pwm, OUTPUT);
-  // Optionally test by writing LOW and reading back?
-  digitalWrite(_in1, LOW);  
-  digitalWrite(_in2, LOW);
-  analogWrite(_pwm, 0);
+  ledcAttachPin(_pwm, 0);
+  ledcWrite(0, usToDuty(1500)); // stop the motor
   return true;
 }
 
-void MotorController::command(int8_t dir, uint8_t speed) {
-  switch (dir) {
-    case  1:  // forward
-      digitalWrite(_in1, HIGH);
-      digitalWrite(_in2, LOW);
-      analogWrite(_pwm, speed);
-      break;
-    case -1:  // reverse
-      digitalWrite(_in1, LOW);
-      digitalWrite(_in2, HIGH);
-      analogWrite(_pwm, speed);
-      break;
-    default:  // stop
-      digitalWrite(_in1, LOW);
-      digitalWrite(_in2, LOW);
-      analogWrite(_pwm, 0);
-      break;
-  }
+int MotorController::usToDuty(int us) {
+  // Convert microseconds to duty cycle
+  float period = 1000000.0f / 50; // 20 ms
+  float fraction = us / period;
+  return int(fraction * ((1 << 12) - 1));
+}
+
+void MotorController::command(int8_t dir, uint8_t) {
+  int us = 1500;
+  if (dir > 0) us = 2000; // forward
+  else if (dir < 0) us = 1000; // reverse
+  ledcWrite(0, usToDuty(us));
+    
 }

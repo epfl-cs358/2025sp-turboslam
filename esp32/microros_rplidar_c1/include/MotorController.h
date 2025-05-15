@@ -4,7 +4,7 @@
 
 class MotorController {
 public:
-  MotorController(int in1Pin, int in2Pin, int pwmPin);
+  MotorController(int pwmPin);
 
   /// Call in setup(), returns false on pin-mode failure
   bool begin();
@@ -13,5 +13,6 @@ public:
   void command(int8_t dir, uint8_t speed = 200);
 
 private:
-  int _in1, _in2, _pwm;
+  int _pwm;
+  static int usToDuty(int us);
 };
