@@ -19,12 +19,16 @@ bool NEO6M::begin() {
 
 bool NEO6M::read() {
   bool updated = false;
-  while (gpsSerial.available()) {
-    char c = gpsSerial.read();
-    Serial.print(c);
-    gps.encode(c);
-    if (gps.location.isUpdated()) {
-      updated = true;
+  unsigned long timeout = millis() + 3000;
+  
+  while (millis() < timeout) {
+    if(gpsSerial.available()) {
+      char c = gpsSerial.read();
+      Serial.print(c);
+      gps.encode(c);
+      if (gps.location.isUpdated()) {
+        updated = true;
+      }
     }
   }
   return updated;

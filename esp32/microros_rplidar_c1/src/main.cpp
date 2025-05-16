@@ -65,7 +65,7 @@ SemaphoreHandle_t ros_publish_mutex;
 QueueHandle_t servoAngleQ;
 
 // gps
-NEO6M gps(Serial2, 9600, 16, 17);  // RX=16, TX=17 (adjust to your wiring)
+NEO6M gps(Serial2, 9600, 18, 17); 
 rcl_publisher_t gps_publisher;
 sensor_msgs__msg__NavSatFix gps_msg;
 
@@ -340,24 +340,24 @@ void setup() {
     #endif
 
     #if TEST_ULTRASONIC
+        if (!ultrasonic.begin()) {
+            Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
+            esp_restart();
+        }
         BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 2, NULL, 1);
         if (ultrasonicTaskCreated != pdPASS) {
             Serial.println("Failed to create Ultrasonic Task");
             esp_restart();
         }
-        if (!ultrasonic.begin()) {
-            Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
-            esp_restart();
-        }
     #endif
     #if TEST_SERVO_LID
+        if(!servo_lid.begin()) {
+            Serial.println("Servo_lib failed to initialize, rebooting...");
+            esp_restart();
+        }
         BaseType_t servoLidTaskCreated = xTaskCreatePinnedToCore(servoLidTask, "Servo Lid Task", 4096, NULL, 3, NULL, 1);
         if (servoLidTaskCreated != pdPASS) {
             Serial.println("Failed to create Servo Lid Task");
-            esp_restart();
-        }
-        if(!servo_lid.begin()) {
-            Serial.println("Servo_lib failed to initialize, rebooting...");
             esp_restart();
         }
     #endif
@@ -517,7 +517,7 @@ void gpsTask(void*) {
             gps.populateNavSatFix(gps_msg);
             rcl_ret_t ret = rcl_publish(&gps_publisher, &gps_msg, nullptr);
             if (ret != RCL_RET_OK) {
-                printf("rclc_executor_spin_some error=%d\r\n", ret);
+                printf("rclc_publish gps error=%d\r\n", ret);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(10)); // 10 Hz
