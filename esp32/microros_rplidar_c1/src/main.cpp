@@ -22,13 +22,13 @@
 //#include "BrushedMotor.h"
 #include "NEO6M.h" 
 
-#define TEST_IMU 0
-#define TEST_ULTRASONIC 0
-#define TEST_ENCODER 0
+#define TEST_IMU 1
+#define TEST_ULTRASONIC 1
+#define TEST_ENCODER 1
 #define TEST_SERVO_DIR 0
 #define TEST_SERVO_LID 0
 #define TEST_MOTOR 0
-#define TEST_GPS 1
+#define TEST_GPS 0
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -254,8 +254,8 @@ rcl_ret_t init_ros() {
         &servo_dir_callback,
         ON_NEW_DATA
     );
-    if (ret != RCL_RET_OK) {
-        printf("Failed to add servo_dir callback to executor: %d\n", ret);
+        if (ret != RCL_RET_OK) {
+            printf("Failed to add servo_dir callback to executor: %d\n", ret);
         return ret;
     }
     // Servo lid
@@ -270,16 +270,18 @@ rcl_ret_t init_ros() {
         printf("Failed to add servo_lid callback to executor: %d\n", ret);
         return ret;
     }
-    // Motor
+
+    //Motor
     // ret = rclc_executor_add_subscription(
-    // &executor,
-    // &motor_subscriber,
-    // &motor_msg,
-    // &motor_callback,
-    // ON_NEW_DATA);
-    // if (ret != RCL_RET_OK) {
-    // printf("Failed to add motor callback to executor: %d\n", ret);
-    // return ret;
+    //     &executor,
+    //     &motor_subscriber,
+    //     &motor_msg,
+    //     &motor_callback,
+    //     ON_NEW_DATA
+    // );
+    //     if (ret != RCL_RET_OK) {
+    //         printf("Failed to add motor callback to executor: %d\n", ret);
+    //     return ret;
     // }
 
     return RCL_RET_OK;
@@ -292,7 +294,7 @@ void servoLidTask(void *parameter);
 void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
-void motorTask(void *parameter);
+//void motorTask(void *parameter);
 void gpsTask(void *parameter);
 
 // Setup function
@@ -319,7 +321,7 @@ void setup() {
             Serial.println("IMU failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 2, NULL, 1);
+        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 5, NULL, 1);
         if (imuTaskCreated != pdPASS) {
             Serial.println("Failed to create IMU Task");
             esp_restart();
@@ -332,7 +334,7 @@ void setup() {
             esp_restart();
         }
         Serial.println("Encoder initialized");
-        BaseType_t encoderTaskCreated = xTaskCreatePinnedToCore(encoderTask, "Encoder Task", 2048, NULL, 2, NULL, 1);
+        BaseType_t encoderTaskCreated = xTaskCreatePinnedToCore(encoderTask, "Encoder Task", 2048, NULL, 5, NULL, 0);
         if (encoderTaskCreated != pdPASS) {
             Serial.println("Failed to create Encoder Task");
             esp_restart();
@@ -344,7 +346,7 @@ void setup() {
             Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 2, NULL, 1);
+        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 5, NULL, 0);
         if (ultrasonicTaskCreated != pdPASS) {
             Serial.println("Failed to create Ultrasonic Task");
             esp_restart();
@@ -355,20 +357,20 @@ void setup() {
             Serial.println("Servo_lib failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t servoLidTaskCreated = xTaskCreatePinnedToCore(servoLidTask, "Servo Lid Task", 4096, NULL, 3, NULL, 1);
+        BaseType_t servoLidTaskCreated = xTaskCreatePinnedToCore(servoLidTask, "Servo Lid Task", 2048, NULL, 4, NULL, 1);
         if (servoLidTaskCreated != pdPASS) {
             Serial.println("Failed to create Servo Lid Task");
             esp_restart();
         }
     #endif
 
-    #if TEST_MOTOR
-        BaseType_t motorTaskCreated = xTaskCreatePinnedToCore(motorTask, "motor_control_task", 4096, NULL, 1, NULL, 1);
-        if (motorTaskCreated != pdPASS) {
-            Serial.println("Failed to create Motor Task");
-            esp_restart();
-        }
-    #endif
+    // #if TEST_MOTOR
+    //     BaseType_t motorTaskCreated = xTaskCreatePinnedToCore(motorTask, "motor_control_task", 4096, NULL, 4, NULL, 1);
+    //     if (motorTaskCreated != pdPASS) {
+    //         Serial.println("Failed to create Motor Task");
+    //         esp_restart();
+    //     }
+    // #endif
 
     #if TEST_GPS
         if (!gps.begin()) {
@@ -388,13 +390,13 @@ void setup() {
     // esp_restart();
     // }
 
-    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 2, NULL, 1); // Higher priority
+    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 3, NULL, 1); // Higher priority
     if (executorTaskCreated != pdPASS) {
         Serial.println("Failed to create Executor Task");
         esp_restart();
     }
 
-    BaseType_t wifiMonitorTaskCreated = xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 2048, NULL, 1, NULL, 1);
+    BaseType_t wifiMonitorTaskCreated = xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 2048, NULL, 1, NULL, 0);
     if (wifiMonitorTaskCreated != pdPASS) {
         Serial.println("Failed to create WiFi Monitor Task");
         esp_restart();
@@ -462,6 +464,7 @@ void servoLidTask(void *parameter) {
         vTaskDelayUntil(&lastWake, period);
     }
 }
+
 void servoPublisherTask(void *parameter) {
     std_msgs__msg__Int32 msg;
     int angle = 0;
@@ -486,17 +489,17 @@ void servoPublisherTask(void *parameter) {
 }
 
 void executorTask(void *parameter) {
-while (true) {
-    if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
-        rcl_ret_t ret = rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-        if (ret != RCL_RET_OK) {
-            printf("rclc_executor_spin_some error=%d\r\n", ret);
+    while (true) {
+        if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
+            rcl_ret_t ret = rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+            if (ret != RCL_RET_OK) {
+                printf("rclc_executor_spin_some error=%d\r\n", ret);
+            }
+            xSemaphoreGive(ros_publish_mutex);
         }
-        xSemaphoreGive(ros_publish_mutex);
+        vTaskDelay(pdMS_TO_TICKS(2));
+        }
     }
-    vTaskDelay(pdMS_TO_TICKS(2));
-    }
-}
 
 void wifiMonitorTask(void *parameter) {
     while (true) {
