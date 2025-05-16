@@ -305,6 +305,9 @@ void setup() {
     WiFi.localIP();
     connect_wifi();
     printf("Free heap: %d\n", esp_get_free_heap_size());
+    printf("%s\n", ros2_agent_ipa.toString().c_str());
+    printf("Agent port: %d\n", ros2_agent_port);
+
 
     if (!motor.begin()) {
         Serial.println("Motor failed to initialize, rebooting...");
