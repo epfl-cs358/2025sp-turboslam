@@ -26,7 +26,7 @@ bool ImuSensor::begin() {
   }
 
   // Initialize message frame
-  imu_msg.header.frame_id.data = (char *)"imu_frame";
+  imu_msg.header.frame_id.data = (char *)"imu_frame"; // where is it defined in LIO SAM
   imu_msg.header.frame_id.size = strlen(imu_msg.header.frame_id.data);
   imu_msg.header.frame_id.capacity = imu_msg.header.frame_id.size + 1;
 
@@ -42,8 +42,9 @@ bool ImuSensor::configureSensor() {
 void ImuSensor::readAndUpdate() {
   if (!bno086.wasReset() && !bno086.getSensorEvent(&sensorValue)) return;
 
-  imu_msg.header.stamp.sec = millis() / 1000;
-  imu_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+  unsigned long ms = millis();
+  imu_msg.header.stamp.sec = ms/ 1000;
+  imu_msg.header.stamp.nanosec = (ms % 1000) * 1000000;
 
   imu_msg.orientation = {0};
   imu_msg.angular_velocity = {0};

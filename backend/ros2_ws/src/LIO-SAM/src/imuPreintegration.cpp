@@ -162,7 +162,7 @@ public:
             if (pubImuPath->get_subscription_count() != 0)
             {
                 imuPath.header.stamp = imuOdomQueue.back().header.stamp;
-                imuPath.header.frame_id = odometryFrame;
+                imuPath.header.frame_Frameid = odometryFrame;
                 pubImuPath->publish(imuPath);
             }
         }
