@@ -9,7 +9,7 @@ extern sensor_msgs__msg__Imu imu_msg;
 class ImuSensor {
     public:
         bool begin();
-        void readAndUpdate();
+        bool readAndUpdate();
         sensor_msgs__msg__Imu& getMsg() { return imu_msg; }
 
     private:

@@ -405,14 +405,22 @@ void setup() {
 
 void imuTask(void *parameter) {
     while (true) {
-        imuSensor.readAndUpdate();
-        if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
-            rcl_ret_t ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
-            if (ret != RCL_RET_OK) {
-                printf("rcl_publish IMU error=%d\r\n", ret);
-            }
-            xSemaphoreGive(ros_publish_mutex);
+        bool ready = imuSensor.readAndUpdate();
+
+        if (!ready) {                     // ➊first trial failed
+            ready = imuSensor.readAndUpdate();   //      quick retry, if doesnt work wait till next tick
         }
+
+        if (ready) {
+            
+            if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
+                rcl_ret_t ret = rcl_publish(&imu_publisher, &imu_msg, NULL);
+                if (ret != RCL_RET_OK) {
+                    printf("rcl_publish IMU error=%d\r\n", ret);
+                }
+                xSemaphoreGive(ros_publish_mutex);
+            }
+        }    
         vTaskDelay(pdMS_TO_TICKS(2.5)); // 400 Hz
     }
     uxTaskGetStackHighWaterMark(NULL);

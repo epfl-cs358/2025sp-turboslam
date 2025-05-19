@@ -39,8 +39,10 @@ bool ImuSensor::configureSensor() {
   bno086.enableReport(SH2_GYROSCOPE_UNCALIBRATED, 400);
 }
 
-void ImuSensor::readAndUpdate() {
-  if (!bno086.wasReset() && !bno086.getSensorEvent(&sensorValue)) return;
+bool ImuSensor::readAndUpdate() {
+
+  //if (!bno086.wasReset() && !bno086.getSensorEvent(&sensorValue)) return;
+  if (bno086.wasReset()) return false;
 
   unsigned long ms = millis();
   imu_msg.header.stamp.sec = ms/ 1000;
@@ -50,26 +52,62 @@ void ImuSensor::readAndUpdate() {
   imu_msg.angular_velocity = {0};
   imu_msg.linear_acceleration = {0};
 
-  // Orientation quaternion
-  if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
-    imu_msg.orientation.w = sensorValue.un.rotationVector.real;
-    imu_msg.orientation.x = sensorValue.un.rotationVector.i;
-    imu_msg.orientation.y = sensorValue.un.rotationVector.j;
-    imu_msg.orientation.z = sensorValue.un.rotationVector.k;
-  }
+  bool gotRot = false, gotAcc = false, gotGyr = false;
+  
+  while (bno086.getSensorEvent(&sensorValue) && (!gotRot || !gotAcc || !gotGyr)) { // continue as long as 
+    switch (sensorValue.sensorId) {                  //there are still msgs in queue and that at least
+                                                     // one of the 3 reposts is missing
+      // Orientation quaternion
+      case SH2_ROTATION_VECTOR:
+          imu_msg.orientation.w = sensorValue.un.rotationVector.real;
+          imu_msg.orientation.x = sensorValue.un.rotationVector.i;
+          imu_msg.orientation.y = sensorValue.un.rotationVector.j;
+          imu_msg.orientation.z = sensorValue.un.rotationVector.k;
+          gotRot = true;
+          break;
 
-  // Linear acceleration (m/s²)
-  if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION) {
-    imu_msg.linear_acceleration.x = sensorValue.un.linearAcceleration.x;
-    imu_msg.linear_acceleration.y = sensorValue.un.linearAcceleration.y;
-    imu_msg.linear_acceleration.z = sensorValue.un.linearAcceleration.z;
-  }
+      // Linear acceleration (m/s²)
+      case SH2_LINEAR_ACCELERATION:
+          imu_msg.linear_acceleration.x = sensorValue.un.linearAcceleration.x;
+          imu_msg.linear_acceleration.y = sensorValue.un.linearAcceleration.y;
+          imu_msg.linear_acceleration.z = sensorValue.un.linearAcceleration.z;
+          gotAcc = true;
+          break;
 
-  // Angular velocity (rad/s)
-  if (sensorValue.sensorId == SH2_GYROSCOPE_UNCALIBRATED) {
-    imu_msg.angular_velocity.x = sensorValue.un.gyroscopeUncal.x;
-    imu_msg.angular_velocity.y = sensorValue.un.gyroscopeUncal.y;
-    imu_msg.angular_velocity.z = sensorValue.un.gyroscopeUncal.z;
+      // Angular velocity (rad/s)
+      case SH2_GYROSCOPE_UNCALIBRATED:
+          imu_msg.angular_velocity.x = sensorValue.un.gyroscopeUncal.x;
+          imu_msg.angular_velocity.y = sensorValue.un.gyroscopeUncal.y;
+          imu_msg.angular_velocity.z = sensorValue.un.gyroscopeUncal.z;
+          gotGyr = true;
+          break;
+
+      default: 
+          break;
+      }
   }
+  return (gotRot && gotAcc && gotGyr); // returned whether we got all 3 reports = one complete msg
+
+  // // Orientation quaternion
+  // if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
+  //   imu_msg.orientation.w = sensorValue.un.rotationVector.real;
+  //   imu_msg.orientation.x = sensorValue.un.rotationVector.i;
+  //   imu_msg.orientation.y = sensorValue.un.rotationVector.j;
+  //   imu_msg.orientation.z = sensorValue.un.rotationVector.k;
+  // }
+
+  // // Linear acceleration (m/s²)
+  // if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION) {
+  //   imu_msg.linear_acceleration.x = sensorValue.un.linearAcceleration.x;
+  //   imu_msg.linear_acceleration.y = sensorValue.un.linearAcceleration.y;
+  //   imu_msg.linear_acceleration.z = sensorValue.un.linearAcceleration.z;
+  // }
+
+  // // Angular velocity (rad/s)
+  // if (sensorValue.sensorId == SH2_GYROSCOPE_UNCALIBRATED) {
+  //   imu_msg.angular_velocity.x = sensorValue.un.gyroscopeUncal.x;
+  //   imu_msg.angular_velocity.y = sensorValue.un.gyroscopeUncal.y;
+  //   imu_msg.angular_velocity.z = sensorValue.un.gyroscopeUncal.z;
+  // }
 }
 
