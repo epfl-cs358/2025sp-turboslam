@@ -24,11 +24,11 @@
 #include <std_msgs/msg/int32.h>
 #include "DMS15.h"
 
-#define TEST_IMU         1
-#define TEST_ULTRASONIC  1
-#define TEST_ENCODER     1
-#define TEST_SERVO_DIR   1
-#define TEST_SERVO_LID   1
+#define TEST_IMU         0
+#define TEST_ULTRASONIC  0
+#define TEST_ENCODER     0
+#define TEST_SERVO_DIR   0
+#define TEST_SERVO_LID   0
 
 // ESC signal pins
 constexpr int escSignalPin = 15;
@@ -297,11 +297,13 @@ void servoLidTask(void *parameter);
 void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
+void motorTask(void *parameter);
+
 
 // Setup function
 void setup() {
     Serial.begin(115200);  // Initialize Serial for debugging
-    bool initMotor = motor.begin();
+    // bool initMotor = motor.begin();
     WiFi.localIP();
     connect_wifi();
     printf("Free heap: %d\n", esp_get_free_heap_size());
@@ -309,10 +311,10 @@ void setup() {
     printf("Agent port: %d\n", ros2_agent_port);
 
 
-    if (!initMotor) {
-        Serial.println("Motor failed to initialize, rebooting...");
-        esp_restart();
-    }
+    // if (!initMotor) {
+    //     Serial.println("Motor failed to initialize, rebooting...");
+    //     esp_restart();
+    // }
 
 
    
@@ -329,6 +331,16 @@ void setup() {
     // }
 
     servoAngleQ = xQueueCreate(1, sizeof(int));
+
+    BaseType_t motor_task = xTaskCreatePinnedToCore(motorTask, "Motor Task", 4096, NULL, 5, NULL, 1);
+        if (motor_task != pdPASS) {
+            Serial.println("Failed to create IMU Task");
+            esp_restart();
+        }
+        if (!motor.begin()) {
+            Serial.println("IMU failed to initialize, rebooting...");
+            esp_restart();
+        }
 
     #if TEST_IMU
         BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 1, NULL, 1);
@@ -378,11 +390,11 @@ void setup() {
         }
     #endif
 
-    BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 4096, NULL, 1, NULL, 0);
-    if (servoTaskCreated != pdPASS) {
-        Serial.println("Failed to create Servo Publisher Task");
-        esp_restart();
-    }
+    // BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 4096, NULL, 1, NULL, 0);
+    // if (servoTaskCreated != pdPASS) {
+    //     Serial.println("Failed to create Servo Publisher Task");
+    //     esp_restart();
+    // }
 
     BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 2, NULL, 0);  // Higher priority
     if (executorTaskCreated != pdPASS) {
@@ -491,8 +503,9 @@ void wifiMonitorTask(void *parameter) {
     uxTaskGetStackHighWaterMark(NULL);
 }
 
-void loop() {
-  // 1) Full forward
+void motorTask(void *parameter) {
+  while (true) {
+    // 1) Full forward
   Serial.println("→ Forward");
   motor.command(+1);
   delay(2000);
@@ -513,6 +526,12 @@ void loop() {
   delay(1000);
 
   // and repeat...
+  }
+  uxTaskGetStackHighWaterMark(NULL);
+}
+
+void loop() {
+  
 }
 
 
