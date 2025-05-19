@@ -13,7 +13,7 @@ bool MotorController::begin() {
   pinMode(_pwm, OUTPUT);
   ledcAttachPin(_pwm, channel);
   ledcWrite(channel, usToDuty(1500)); // stop the motor
-  delay(1500); // wait for 1.5 second
+  delay(3500); // wait for 3.5 seconds !!
   return true;
 }
 

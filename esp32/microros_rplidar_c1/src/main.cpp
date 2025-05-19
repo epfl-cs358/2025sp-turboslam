@@ -301,7 +301,7 @@ void servoPublisherTask(void *parameter);
 // Setup function
 void setup() {
     Serial.begin(115200);  // Initialize Serial for debugging
-    motor.begin();
+    bool initMotor = motor.begin();
     WiFi.localIP();
     connect_wifi();
     printf("Free heap: %d\n", esp_get_free_heap_size());
@@ -309,7 +309,7 @@ void setup() {
     printf("Agent port: %d\n", ros2_agent_port);
 
 
-    if (!motor.begin()) {
+    if (!initMotor) {
         Serial.println("Motor failed to initialize, rebooting...");
         esp_restart();
     }
