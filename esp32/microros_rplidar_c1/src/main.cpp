@@ -492,7 +492,27 @@ void wifiMonitorTask(void *parameter) {
 }
 
 void loop() {
-    // Empty loop
+  // 1) Full forward
+  Serial.println("→ Forward");
+  motor.command(+1);
+  delay(2000);
+
+  // 2) Stop
+  Serial.println("⏸ Stop");
+  motor.command(0);
+  delay(1000);
+
+  // 3) Full reverse
+  Serial.println("← Reverse");
+  motor.command(-1);
+  delay(2000);
+
+  // 4) Stop
+  Serial.println("⏸ Stop");
+  motor.command(0);
+  delay(1000);
+
+  // and repeat...
 }
 
 

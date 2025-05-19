@@ -34,19 +34,20 @@ MotorController::MotorController(int pwmPin)
   /// Call in setup(), returns false on pin-mode failure
   bool MotorController::begin() {
     _esc.attach(_pwmPin);
-    _esc.writeMicroseconds(_neutralUs);  // Set initial angle to neutral
-    delay(1500);
-    return true;
+    Serial.println(_esc.attached() ? "ESC attached" : "ESC not attached"); 
+    _esc.write(_neutralUs);  // Set initial angle to neutral
+    delay(3500);
+    return _esc.attached();
   }
 
   /// Drive the motor: +1 forward, -1 reverse, 0 stop
   void MotorController::command(int8_t dir) {
     if (dir > 0) {
-      _esc.writeMicroseconds(_maxUs);
+      _esc.write(_maxUs);
     } else if (dir < 0) {
-      _esc.writeMicroseconds(_minUs);
+      _esc.write(_minUs);
     } else {
-      _esc.writeMicroseconds(_neutralUs);
+      _esc.write(_neutralUs);
     }
   }
 
