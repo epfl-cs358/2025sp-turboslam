@@ -29,9 +29,10 @@
 #define TEST_ENCODER     0
 #define TEST_SERVO_DIR   0
 #define TEST_SERVO_LID   0
+#define ESC_PIN 15 
 
 // ESC signal pins
-constexpr int escSignalPin = 15;
+//const int escSignalPin = 15;
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -43,7 +44,7 @@ rcl_subscription_t motor_cmd_subscriber;
 std_msgs__msg__Int8 motor_cmd_msg;
 
 // Motor controller
-MotorController motor(escSignalPin);
+MotorController motor(ESC_PIN);
 
 // IMU
 ImuSensor imuSensor;
@@ -106,10 +107,15 @@ void servo_lid_callback(const void* msgin) {
 }
 
 // Motor callback
-void motor_callback(const void * msgin) {
-    const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-    motor.command(cmd->data);
-    printf("Motor cmd: %d\n", cmd->data);
+// void motor_callback(const void * msgin) {
+//     const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+//     motor.command(cmd->data);
+//     printf("Motor cmd: %d\n", cmd->data);
+// }
+void motor_callback(const void * msgin)
+{
+    auto cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+    motor.command(cmd->data);            // –100 … +100 %
 }
 
 rcl_ret_t init_ros() {
@@ -297,7 +303,7 @@ void servoLidTask(void *parameter);
 void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
-void motorTask(void *parameter);
+// void motorTask(void *parameter);
 
 
 // Setup function
@@ -316,7 +322,10 @@ void setup() {
     //     esp_restart();
     // }
 
-
+    if (!motor.begin()) {
+    Serial.println("ESC init failed – rebooting");
+    esp_restart();
+}
    
     if (RCL_RET_OK != init_ros()) {
         printf("init_ros failed. Rebooting ...\r\n");
@@ -332,15 +341,15 @@ void setup() {
 
     servoAngleQ = xQueueCreate(1, sizeof(int));
 
-    BaseType_t motor_task = xTaskCreatePinnedToCore(motorTask, "Motor Task", 4096, NULL, 5, NULL, 1);
-        if (motor_task != pdPASS) {
-            Serial.println("Failed to create IMU Task");
-            esp_restart();
-        }
-        if (!motor.begin()) {
-            Serial.println("IMU failed to initialize, rebooting...");
-            esp_restart();
-        }
+    // BaseType_t motor_task = xTaskCreatePinnedToCore(motorTask, "Motor Task", 4096, NULL, 5, NULL, 1);
+    //     if (motor_task != pdPASS) {
+    //         Serial.println("Failed to create IMU Task");
+    //         esp_restart();
+    //     }
+    //     if (!motor.begin()) {
+    //         Serial.println("IMU failed to initialize, rebooting...");
+    //         esp_restart();
+    //     }
 
     #if TEST_IMU
         BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 1, NULL, 1);
@@ -503,32 +512,32 @@ void wifiMonitorTask(void *parameter) {
     uxTaskGetStackHighWaterMark(NULL);
 }
 
-void motorTask(void *parameter) {
-  while (true) {
-    // 1) Full forward
-  Serial.println("→ Forward");
-  motor.command(+1);
-  delay(2000);
+// void motorTask(void *parameter) {
+//   while (true) {
+//     // 1) Full forward
+//   Serial.println("→ Forward");
+//   motor.command(+1);
+//   delay(2000);
 
-  // 2) Stop
-  Serial.println("⏸ Stop");
-  motor.command(0);
-  delay(1000);
+//   // 2) Stop
+//   Serial.println("⏸ Stop");
+//   motor.command(0);
+//   delay(1000);
 
-  // 3) Full reverse
-  Serial.println("← Reverse");
-  motor.command(-1);
-  delay(2000);
+//   // 3) Full reverse
+//   Serial.println("← Reverse");
+//   motor.command(-1);
+//   delay(2000);
 
-  // 4) Stop
-  Serial.println("⏸ Stop");
-  motor.command(0);
-  delay(1000);
+//   // 4) Stop
+//   Serial.println("⏸ Stop");
+//   motor.command(0);
+//   delay(1000);
 
-  // and repeat...
-  }
-  uxTaskGetStackHighWaterMark(NULL);
-}
+//   // and repeat...
+//   }
+//   uxTaskGetStackHighWaterMark(NULL);
+// }
 
 void loop() {
   
