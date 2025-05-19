@@ -107,8 +107,8 @@ void servo_lid_callback(const void* msgin) {
 
 // Motor callback
 void motor_callback(const void * msgin) {
-    auto cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-    motor.command(cmd->data, 200);
+    const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+    motor.command(cmd->data);
     printf("Motor cmd: %d\n", cmd->data);
 }
 
