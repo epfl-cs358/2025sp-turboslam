@@ -84,6 +84,7 @@ void connect_wifi(){
     WiFi.mode(WIFI_STA);     // Set to Station mode
     WiFi.begin(ssid, pass);  // ssid and pass are defined in credentials.h
     while (WiFi.status() != WL_CONNECTED) {
+        printf("Wifi status: %d\n",  WiFi.status());
         delay(1000);
         Serial.print(".");
     }
@@ -507,22 +508,22 @@ void motorTask(void *parameter) {
   while (true) {
     // 1) Full forward
   Serial.println("→ Forward");
-  motor.command(+1);
+  motor.command(1550);
   delay(2000);
 
   // 2) Stop
   Serial.println("⏸ Stop");
-  motor.command(0);
+  motor.command(1500);
   delay(1000);
 
   // 3) Full reverse
   Serial.println("← Reverse");
-  motor.command(-1);
+  motor.command(1450);
   delay(2000);
 
   // 4) Stop
   Serial.println("⏸ Stop");
-  motor.command(0);
+  motor.command(1500);
   delay(1000);
 
   // and repeat...
@@ -535,5 +536,63 @@ void loop() {
 }
 
 
+
+
+// #include <Arduino.h>
+// #include "MotorController.h"
+
+// // ESC signal pin
+// constexpr int escSignalPin = 15;
+
+// // Create our MotorController
+// MotorController motor(escSignalPin);
+
+// void setup() {
+//     pinMode(LED_BUILTIN, OUTPUT);
+
+//     Serial.begin(115200);
+//     for (int i = 0; i < 6; i++) {
+//         digitalWrite(LED_BUILTIN, HIGH);
+//         delay(200);
+//         digitalWrite(LED_BUILTIN, LOW);
+//         delay(200);
+//     }
+//     Serial.println("Hello from setup!");
+//     while (!Serial) {}  
+//     Serial.println("\nREADY: f=forward, r=reverse, s=stop");
+
+//     // Attach & arm ESC
+//     if (!motor.begin()) {
+//       Serial.println("ERROR: ESC failed to attach!");
+//       while (1) delay(100);
+//     }
+//     Serial.println("ESC armed (neutral).");
+// }
+
+// void loop() {
+//     if (!Serial.available()) {
+//       delay(10);
+//       return;
+//     }
+
+//     char c = Serial.read();
+//     switch (c) {
+//       case 'w': case 'W':
+//         Serial.println("→ FORWARD");
+//         motor.command(1650);  // 2 ms pulse = full forward
+//         break;
+//       case 's': case 'S':
+//         Serial.println("← REVERSE");
+//         motor.command(1350);  // 1 ms pulse = full reverse
+//         break;
+//       case 'b': case 'B':
+//         Serial.println("⏸ STOP");
+//         motor.command(1500);  // 1.5 ms pulse = neutral/brake
+//         break;
+//       default:
+//         // ignore any other character
+//         break;
+//     }
+//   }
 
 

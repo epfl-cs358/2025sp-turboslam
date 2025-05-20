@@ -33,21 +33,31 @@ MotorController::MotorController(int pwmPin)
 }
   /// Call in setup(), returns false on pin-mode failure
   bool MotorController::begin() {
-    _esc.attach(_pwmPin);
+    _esc.setPeriodHertz(50); // Set frequency to 50 Hz
+    _esc.attach(_pwmPin, _minUs, _maxUs); // Attach the ESC to the PWM pin
     Serial.println(_esc.attached() ? "ESC attached" : "ESC not attached"); 
-    _esc.write(_neutralUs);  // Set initial angle to neutral
+    _esc.writeMicroseconds(_maxUs);  // Set to full reverse
+    delay(3500); // Wait for ESC to initialize
+    _esc.writeMicroseconds(_neutralUs);  // Set initial angle to neutral
     delay(3500);
     return _esc.attached();
   }
 
   /// Drive the motor: +1 forward, -1 reverse, 0 stop
-  void MotorController::command(int8_t dir) {
-    if (dir > 0) {
-      _esc.write(_maxUs);
-    } else if (dir < 0) {
-      _esc.write(_minUs);
-    } else {
-      _esc.write(_neutralUs);
+  void MotorController::command(int dir) {
+    // Convert direction to microseconds
+    int targetUs = dir;
+    int currentUs = _esc.readMicroseconds();
+    const int step = 5; // Adjust step size for smoother acceleration/deceleration
+    // Gradually change speed until target is reached
+    while (currentUs != targetUs) {
+      if (currentUs < targetUs) {
+        currentUs = min(currentUs + step, targetUs);
+      } else {
+        currentUs = max(currentUs - step, targetUs);
+      }
+      _esc.writeMicroseconds(currentUs);
+      delay(50); // Small delay for stability
     }
   }
 

@@ -10,7 +10,7 @@ public:
   bool begin();
 
   /// dir = +1 forward, -1 reverse, 0 stop/brake
-  void command(int8_t dir);
+  void command(int dir);
 
 private:
   int   _pwmPin;
