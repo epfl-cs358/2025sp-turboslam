@@ -22,7 +22,7 @@
 //#include "BrushedMotor.h"
 #include "NEO6M.h" 
 
-#define TEST_IMU 1
+#define TEST_IMU 0
 #define TEST_ULTRASONIC 0
 #define TEST_ENCODER 0
 #define TEST_SERVO_DIR 0

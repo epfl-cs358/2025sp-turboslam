@@ -4,6 +4,7 @@ Go to ros2_ws/
 
 ```bash
 colcon build --packages-select joystick_ros2
+source install/setup.bash
 ros2 run joystick_ros2 joystick_ros2
 ```
 Change throttle time in line 183 of joystick_ros2.py if needed.
