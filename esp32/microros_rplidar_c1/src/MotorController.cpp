@@ -1,63 +1,70 @@
-// #include "MotorController.h"
-
-// MotorController::MotorController(int pwmPin)
-//  : _pwm(pwmPin) { }
-
-// bool MotorController::begin() {
-//   // pinMode can fail silently, so we just configure
-//   const int channel = 0;
-//   const int freq = 50; // 50 Hz
-//   const int resolution = 12; // 12 bits
-//   ledcSetup(channel, freq, resolution);
-//   // ledcSetup(0, 50, 12); 
-//   pinMode(_pwm, OUTPUT);
-//   ledcAttachPin(_pwm, channel);
-//   ledcWrite(channel, 1500); // stop the motor
-//   delay(3500); // wait for 3.5 seconds !!
-//   return true;
-// }
-
-// void MotorController::command(int8_t dir, uint8_t) { 
-//   int us = 1500;
-//   if (dir > 0) us = 2000; // forward
-//   else if (dir < 0) us = 1000; // reverse
-//   ledcWrite(0, usToDuty(us));
-    
-// }
-
 #include "MotorController.h"
 
 MotorController::MotorController(int pwmPin)
-  : _pwmPin(pwmPin), _esc() {
-  // Constructor initializes the PWM pin and ESC
-}
+  : _pwmPin(pwmPin) {}
+
   /// Call in setup(), returns false on pin-mode failure
   bool MotorController::begin() {
     _esc.setPeriodHertz(50); // Set frequency to 50 Hz
-    _esc.attach(_pwmPin, _minUs, _maxUs); // Attach the ESC to the PWM pin
-    Serial.println(_esc.attached() ? "ESC attached" : "ESC not attached"); 
-    _esc.writeMicroseconds(_maxUs);  // Set to full reverse
-    delay(3500); // Wait for ESC to initialize
-    _esc.writeMicroseconds(_neutralUs);  // Set initial angle to neutral
+    _esc.attach(_pwmPin, MAX_REVERSE_US, MAX_FORWARD_US); // Attach the ESC to the PWM pin
+    if (!_esc.attached()) {return false;}
+
+    // ESC calibration: full forward 3s -> neutral 3s
+    // _esc.writeMicroseconds(MAX_FORWARD_US);  
+    // delay(3500); 
+    _esc.writeMicroseconds(NEUTRAL_US);  
     delay(3500);
-    return _esc.attached();
+
+    // Initialize internal state
+    _currentUs = NEUTRAL_US; 
+    _targetUs = NEUTRAL_US;
+
+    return true;
   }
 
-  /// Drive the motor: +1 forward, -1 reverse, 0 stop
-  void MotorController::command(int dir) {
-    // Convert direction to microseconds
-    int targetUs = dir;
-    int currentUs = _esc.readMicroseconds();
-    const int step = 5; // Adjust step size for smoother acceleration/deceleration
-    // Gradually change speed until target is reached
-    while (currentUs != targetUs) {
-      if (currentUs < targetUs) {
-        currentUs = min(currentUs + step, targetUs);
-      } else {
-        currentUs = max(currentUs - step, targetUs);
-      }
-      _esc.writeMicroseconds(currentUs);
-      delay(50); // Small delay for stability
+  void MotorController::setTargetUs(uint16_t us) {
+    // Set the target pulse width in microseconds
+    _targetUs = constrain(us, MAX_REVERSE_US, MAX_FORWARD_US);
+  }
+
+  void MotorController::setTargetPercent(float p) {
+    // Set the target pulse width as a percentage of the range
+    _targetUs = constrain(p, -1.0f, 1.0f);
+
+    if (p >= 0.0f) {
+      setTargetUs(NEUTRAL_US + uint16_t(p * (MAX_FORWARD_US - NEUTRAL_US)));
+    } else {
+      setTargetUs(NEUTRAL_US + uint16_t(p * (NEUTRAL_US - MAX_REVERSE_US)));
     }
   }
+
+  void MotorController::update() {
+    // Gradually change speed until target is reached
+    if (_currentUs == _targetUs) { return; }
+     
+    if (_currentUs < _targetUs) {
+      _currentUs = min<uint16_t>(_currentUs + RAMP_STEP_US, _targetUs);
+    } else {
+      _currentUs = max<uint16_t>(_currentUs - RAMP_STEP_US, _targetUs);
+    }
+    _esc.writeMicroseconds(_currentUs);
+  }
+
+  // /// Drive the motor: +1 forward, -1 reverse, 0 stop
+  // void MotorController::command(int dir) {
+  //   // Convert direction to microseconds
+  //   int targetUs = dir;
+  //   int currentUs = _esc.readMicroseconds();
+  //   const int step = 5; // Adjust step size for smoother acceleration/deceleration
+  //   // Gradually change speed until target is reached
+  //   while (currentUs != targetUs) {
+  //     if (currentUs < targetUs) {
+  //       currentUs = min(currentUs + step, targetUs);
+  //     } else {
+  //       currentUs = max(currentUs - step, targetUs);
+  //     }
+  //     _esc.writeMicroseconds(currentUs);
+  //     delay(50); // Small delay for stability
+  //   }
+  // }
 
