@@ -24,6 +24,10 @@
 #include <std_msgs/msg/int32.h>
 #include "DMS15.h"
 
+#include <sensor_msgs/msg/joy.h>        // ROS2 Joy message type
+#include <std_msgs/msg/int32.h>        // ROS2 Int32 message type
+#include <std_msgs/msg/float32.h>
+
 #define TEST_IMU         0
 #define TEST_ULTRASONIC  0
 #define TEST_ENCODER     0
@@ -32,7 +36,108 @@
 #define ESC_PIN 15 
 
 // ESC signal pins
-//const int escSignalPin = 15;
+constexpr int escSignalPin = 15;
+constexpr int steeringServoPin = 26;
+
+// Subscriptions
+auto joy_sub       = rcl_get_zero_initialized_subscription();
+auto accel_sub     = rcl_get_zero_initialized_subscription();
+auto decel_sub     = rcl_get_zero_initialized_subscription();
+auto joyx_sub      = rcl_get_zero_initialized_subscription();
+auto joyy_sub      = rcl_get_zero_initialized_subscription();
+
+// sensor_msgs__msg__Joy         joy_msg;
+// std_msgs__msg__Float32        accel_msg;
+// std_msgs__msg__Float32        decel_msg;
+// std_msgs__msg__Float32        joyx_msg;
+// std_msgs__msg__Float32        joyy_msg;
+
+void joyCallback(const void * msgin) {
+//   Serial.println("[JOY] joyCallback()");  
+//   const sensor_msgs__msg__Joy * joy = (const sensor_msgs__msg__Joy *)msgin;
+    const auto *joy = static_cast<const sensor_msgs__msg__Joy *>(msgin);
+
+
+
+  // Read axes from Joy message
+  float steer_axis  = joy->axes.data[0];   // left/right stick for steering
+  float brake_axis  = joy->axes.data[2];   // LT trigger for brake/reverse
+  float throttle_axis = joy->axes.data[5]; // RT trigger for throttle
+
+  Serial.printf("[JOY] steer=%.2f, throttle=%.2f, brake=%.2f\n",
+    steer_axis, throttle_axis, brake_axis);
+    if (fabsf(steer_axis) < 0.05f) {
+        Serial.printf("[JOY] steer=%.2f\n", steer_axis);
+        steer_axis = 0.0f;
+    }
+
+    int steer_deg = (int)(90 + steer_axis * 10); // Map to servo angle
+    steer_deg = constrain(steer_deg, 85, 95); 
+    servo_dir.setAngle(steer_deg);
+
+    // motor command
+    float forward = throttle_axis > 0 ? throttle_axis : 0;
+    float reverse = brake_axis > 0 ? brake_axis : 0;
+    float cmd_percent = forward - reverse;
+    cmd_percent = constrain(cmd_percent, -0.3f, 0.3f);
+
+    motor.setTargetPercent(cmd_percent);
+
+    Serial.printf(
+    "[JOY] steer=%.2f (deg=%d), throttle=%.2f, brake=%.2f → pct=%.2f\n",
+    steer_axis, steer_deg, throttle_axis, brake_axis, cmd_percent);
+
+
+//   // Map steering axis (-1 to +1) to servo pulse width (1000 to 2000 µs)
+//   int steering_us = (int)(1500 + steer_axis * 500);  // centered at 1500 µs, ±500 µs range
+//   steering_us = constrain(steering_us, 1400, 1600);  // clamp to [1000,2000] just in case
+//   steeringServo.writeMicroseconds(steering_us);
+
+//   // Determine throttle/reverse for ESC. Neutral is 1500 µs.
+//   float forward = 0.0f;
+//   float reverse = 0.0f;
+//   // Some controllers report triggers 0.0 to 1.0, others -1.0 to 1.0. Adjust if needed:
+//   if (throttle_axis < -0.1f || brake_axis < -0.1f) {
+//     // If axes are in [-1,1] range, normalize them to [0,1]
+//     forward = (throttle_axis + 1.0f) / 2.0f;
+//     reverse = (brake_axis   + 1.0f) / 2.0f;
+//   } else {
+//     // Assume already 0 to 1
+//     forward = (throttle_axis > 0.0f) ? throttle_axis : 0.0f;
+//     reverse = (brake_axis   > 0.0f) ? brake_axis   : 0.0f;
+//   }
+
+//   int esc_us = 1500; // start at neutral
+//   if (reverse > 0.05f) {
+//     // Brake/Reverse active – map to 1500 down to 1000 µs
+//     esc_us = (int)(1500 - reverse * 500);   // full reverse = ~1000 µs
+//   } else if (forward > 0.05f) {
+//     // Throttle active – map to 1500 up to 2000 µs
+//     esc_us = (int)(1500 + forward * 500);   // full throttle = ~2000 µs
+//   } 
+//   esc_us = constrain(esc_us, 1000, 2000);
+//   escServo.writeMicroseconds(esc_us);
+}
+
+void accelCallback(const void * msgin) {
+const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+Serial.printf("[ACCEL] data=%.3f\r\n", msg->data);
+}
+
+void decelCallback(const void * msgin) {
+const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+Serial.printf("[DECEL] data=%.3f\r\n", msg->data);
+}
+
+void joyxCallback(const void * msgin) {
+const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+Serial.printf("[JOYX] data=%.3f\r\n", msg->data);
+}
+
+void joyyCallback(const void * msgin) {
+const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+Serial.printf("[JOYY] data=%.3f\r\n", msg->data);
+}
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -61,7 +166,7 @@ rcl_publisher_t encoder_publisher;
 
 //Servo
 //To test run : $ ros2 topic pub /servo_lid/angle std_msgs/msg/Int32 "{data: 90}" 
-DMS15 servo_dir(26); // servo used for the direcition of the car
+DMS15 servo_dir(steeringServoPin); // servo used for the direcition of the car
 rcl_subscription_t servo_dir_subscriber;
 std_msgs__msg__Int32 servo_dir_angle_msg;
  
@@ -85,6 +190,7 @@ void connect_wifi(){
     WiFi.mode(WIFI_STA);     // Set to Station mode
     WiFi.begin(ssid, pass);  // ssid and pass are defined in credentials.h
     while (WiFi.status() != WL_CONNECTED) {
+        printf("Wifi status: %d\n",  WiFi.status());
         delay(1000);
         Serial.print(".");
     }
@@ -107,9 +213,9 @@ void servo_lid_callback(const void* msgin) {
 }
 
 // Motor callback
-// void motor_callback(const void * msgin) {
+// void motor_callback(const void* msgin) {
 //     const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-//     motor.command(cmd->data);
+//     motor.setTargetPercent(float(cmd->data));
 //     printf("Motor cmd: %d\n", cmd->data);
 // }
 void motor_callback(const void * msgin)
@@ -312,20 +418,16 @@ void setup() {
     // bool initMotor = motor.begin();
     WiFi.localIP();
     connect_wifi();
-    printf("Free heap: %d\n", esp_get_free_heap_size());
-    printf("%s\n", ros2_agent_ipa.toString().c_str());
-    printf("Agent port: %d\n", ros2_agent_port);
+
+    // Initialize the steering servo
+    if (!servo_dir.begin()) {
+        Serial.println("Servo_dir failed to initialize, rebooting...");
+        esp_restart();
+    }
+    // Set it to center (90 degrees)
+    servo_dir.setAngle(90);
 
 
-    // if (!initMotor) {
-    //     Serial.println("Motor failed to initialize, rebooting...");
-    //     esp_restart();
-    // }
-
-    if (!motor.begin()) {
-    Serial.println("ESC init failed – rebooting");
-    esp_restart();
-}
    
     if (RCL_RET_OK != init_ros()) {
         printf("init_ros failed. Rebooting ...\r\n");
@@ -512,37 +614,78 @@ void wifiMonitorTask(void *parameter) {
     uxTaskGetStackHighWaterMark(NULL);
 }
 
-// void motorTask(void *parameter) {
-//   while (true) {
-//     // 1) Full forward
-//   Serial.println("→ Forward");
-//   motor.command(+1);
-//   delay(2000);
-
-//   // 2) Stop
-//   Serial.println("⏸ Stop");
-//   motor.command(0);
-//   delay(1000);
-
-//   // 3) Full reverse
-//   Serial.println("← Reverse");
-//   motor.command(-1);
-//   delay(2000);
-
-//   // 4) Stop
-//   Serial.println("⏸ Stop");
-//   motor.command(0);
-//   delay(1000);
-
-//   // and repeat...
-//   }
-//   uxTaskGetStackHighWaterMark(NULL);
-// }
+void motorTask(void*) {
+    const TickType_t period = pdMS_TO_TICKS(UPDATE_PERIOD_MS);
+    TickType_t lastWake = xTaskGetTickCount();
+    while (true) {
+        motor.update();
+        xTaskDelayUntil(&lastWake, period);
+    }
+    uxTaskGetStackHighWaterMark(NULL);
+}
 
 void loop() {
   
 }
 
 
+
+
+// #include <Arduino.h>
+// #include "MotorController.h"
+
+// // ESC signal pin
+// constexpr int escSignalPin = 15;
+
+// // Create our MotorController
+// MotorController motor(escSignalPin);
+
+// void setup() {
+//     pinMode(LED_BUILTIN, OUTPUT);
+
+//     Serial.begin(115200);
+//     for (int i = 0; i < 6; i++) {
+//         digitalWrite(LED_BUILTIN, HIGH);
+//         delay(200);
+//         digitalWrite(LED_BUILTIN, LOW);
+//         delay(200);
+//     }
+//     Serial.println("Hello from setup!");
+//     while (!Serial) {}  
+//     Serial.println("\nREADY: f=forward, r=reverse, s=stop");
+
+//     // Attach & arm ESC
+//     if (!motor.begin()) {
+//       Serial.println("ERROR: ESC failed to attach!");
+//       while (1) delay(100);
+//     }
+//     Serial.println("ESC armed (neutral).");
+// }
+
+// void loop() {
+//     if (!Serial.available()) {
+//       delay(10);
+//       return;
+//     }
+
+//     char c = Serial.read();
+//     switch (c) {
+//       case 'w': case 'W':
+//         Serial.println("→ FORWARD");
+//         motor.command(1650);  // 2 ms pulse = full forward
+//         break;
+//       case 's': case 'S':
+//         Serial.println("← REVERSE");
+//         motor.command(1350);  // 1 ms pulse = full reverse
+//         break;
+//       case 'b': case 'B':
+//         Serial.println("⏸ STOP");
+//         motor.command(1500);  // 1.5 ms pulse = neutral/brake
+//         break;
+//       default:
+//         // ignore any other character
+//         break;
+//     }
+//   }
 
 

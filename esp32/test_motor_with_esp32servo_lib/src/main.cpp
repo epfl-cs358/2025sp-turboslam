@@ -3,10 +3,15 @@
 Servo esc;
 #define ESC_PIN 15  // Any PWM-capable GPIO
 
+
 void increase() {
-    Serial.println("Forward...");
-    esc.writeMicroseconds(1600);
-    delay(3000);
+    Serial.println("Increasing speed...");
+    int i = 1500;
+    while(i <= 1600) {
+        esc.writeMicroseconds(i);
+        i += 10;
+        delay(50);
+    }
 }
 
 void neutral() {
@@ -15,10 +20,14 @@ void neutral() {
     delay(3000);
 }
 
-void decrease(int dir) {
-    Serial.println("Reverse...");
-    esc.writeMicroseconds(1400);
-    delay(3000);
+void decrease() {
+    Serial.println("Decreasing speed...");
+    int i = 1600;
+    while(i >= 1500) {
+        esc.writeMicroseconds(i);
+        i -= 10;
+        delay(50);
+    }
 }
 
 
@@ -40,8 +49,8 @@ void setup() {
 
 
 void loop() {
-    forward();
-    neutral();
-    reverse();
-    neutral();
+    increase();
+    delay(3000);
+    decrease();
+    delay(3000);
 }
