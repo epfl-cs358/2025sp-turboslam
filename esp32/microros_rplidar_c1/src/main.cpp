@@ -22,8 +22,8 @@
 //#include "BrushedMotor.h"
 #include "NEO6M.h" 
 
-#define TEST_IMU 1
-#define TEST_ULTRASONIC 1
+#define TEST_IMU 0
+#define TEST_ULTRASONIC 0
 #define TEST_ENCODER 0
 #define TEST_SERVO_DIR 0
 #define TEST_SERVO_LID 1
@@ -141,6 +141,7 @@ rcl_ret_t init_ros() {
     }
 
     // Lidar
+    #if TEST_LIDAR
     printf("rclc_publisher_init_default...\r\n");
     ret =
         rclc_publisher_init_default(
@@ -153,6 +154,7 @@ rcl_ret_t init_ros() {
         printf("rclc_publisher_init_default error=%d\r\n", ret);
         return ret;
     }
+    #endif
 
     // IMU
     #if TEST_IMU
@@ -188,7 +190,7 @@ rcl_ret_t init_ros() {
             &encoder_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-            "/encoder/angle"
+            "/encoder"
         );
         if (ret != RCL_RET_OK) {
             printf("encoder publisher init failed: %d\n", ret);
@@ -202,7 +204,7 @@ rcl_ret_t init_ros() {
             &gps_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, NavSatFix),
-            "/gps/fix"
+            "/gps"
         );
         if (ret != RCL_RET_OK) {
             printf("gps publisher init failed: %d\n", ret);
@@ -216,7 +218,7 @@ rcl_ret_t init_ros() {
             &servo_angle_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-            "lidar_servo_angle"
+            "/lidar_servo_angle"
         );
         if (ret != RCL_RET_OK) {
             printf("Failed to create servo_angle publisher: %d\n", ret);
@@ -384,7 +386,7 @@ void setup() {
     #endif
 
     #if TEST_SERVO_ANGLE_PUB
-        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 4096, NULL, 4, NULL, 1);
+        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL, 4, NULL, 1);
         if (servoTaskCreated != pdPASS) {
         Serial.println("Failed to create Servo Publisher Task");
         esp_restart();
@@ -397,18 +399,18 @@ void setup() {
         lidar.resetLidar();
         delay(800);
         lidar.startLidar();
-        BaseType_t lidarTaskCreated = xTaskCreatePinnedToCore(lidarTask, "Lidar Task", 8192, NULL, 5, NULL, 0);
+        BaseType_t lidarTaskCreated = xTaskCreatePinnedToCore(lidarTask, "Lidar Task", 4096, NULL, 5, NULL, 0);
         if (lidarTaskCreated != pdPASS) {
             Serial.println("Failed to create Lidar Task");
             esp_restart();
         }
     #endif
 
-    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 3, NULL, 0); // Higher priority
-    if (executorTaskCreated != pdPASS) {
-        Serial.println("Failed to create Executor Task");
-        esp_restart();
-    }
+    // BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 3, NULL, 0); // Higher priority
+    // if (executorTaskCreated != pdPASS) {
+    //     Serial.println("Failed to create Executor Task");
+    //     esp_restart();
+    // }
 
     BaseType_t wifiMonitorTaskCreated = xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 2048, NULL, 1, NULL, 0);
     if (wifiMonitorTaskCreated != pdPASS) {
@@ -429,7 +431,6 @@ void imuTask(void *parameter) {
         }
         vTaskDelay(pdMS_TO_TICKS(5)); // 200 Hz
     }
-    uxTaskGetStackHighWaterMark(NULL);
 }
 
 void encoderTask(void *parameter) {
@@ -444,7 +445,6 @@ void encoderTask(void *parameter) {
         }
         vTaskDelay(pdMS_TO_TICKS(20)); // 50 Hz
     }
-    uxTaskGetStackHighWaterMark(NULL);
 }
 
 void ultrasonicTask(void *parameter) {
@@ -464,7 +464,6 @@ void ultrasonicTask(void *parameter) {
         }
         vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz
     }
-    uxTaskGetStackHighWaterMark(NULL);
 }
 
 void servoLidTask(void *parameter) {
@@ -472,7 +471,7 @@ void servoLidTask(void *parameter) {
     TickType_t lastWake = xTaskGetTickCount();
     while (true) {
         // compute next angle
-        servo_lid.tiltLidar(70, 110, 2000);
+        servo_lid.tiltLidar(60, 120, 2000);
         int angle = servo_lid.getAngle();
         xQueueOverwrite(servoAngleQ, &angle);
         vTaskDelayUntil(&lastWake, period);
@@ -499,7 +498,6 @@ void servoPublisherTask(void *parameter) {
         }
         vTaskDelayUntil(&lastWake, period);
     }
-    uxTaskGetStackHighWaterMark(NULL);
 }
 
 void executorTask(void *parameter) {
@@ -523,7 +521,6 @@ void wifiMonitorTask(void *parameter) {
         }
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
-    uxTaskGetStackHighWaterMark(NULL);
 }
 
 void gpsTask(void*) {
@@ -537,7 +534,6 @@ void gpsTask(void*) {
                 printf("rclc_publish gps error=%d\r\n", ret);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(100)); // 10 Hz
     } 
 }
 
@@ -545,20 +541,15 @@ unsigned long total_loop_time = 0L;
 float loop_period = 0.0;
 
 void lidarTask(void *parameter) {
+    const TickType_t period = pdMS_TO_TICKS(100);  // 100 ms → 10 Hz
+    TickType_t lastWake = xTaskGetTickCount();
+
     while (true) {
-        unsigned long uart_elapsed = millis();
         int count = lidar.uartRx();
-        uart_elapsed = millis() - uart_elapsed;
-
-        unsigned long process_elapsed = millis();
         lidar.processFrame(count);
-        process_elapsed = millis() - process_elapsed;
-
-        unsigned long publish_elapsed = millis();
 
         if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
             rcl_ret_t ret_pub = rcl_publish(&publisher, &lidar.scan_msg, NULL);
-            publish_elapsed = millis() - publish_elapsed;
             if (ret_pub != RCL_RET_OK)
             {
                 printf("rcl_publish returned %d\r\n", ret_pub);
@@ -566,20 +557,10 @@ void lidarTask(void *parameter) {
             }
             xSemaphoreGive(ros_publish_mutex);
         }
-
-        total_loop_time = millis() - total_loop_time;
-        float total_loop_time_f = (float)total_loop_time;
-        loop_period = loop_period * 0.9 + total_loop_time_f * 0.1;
-
-        Serial.printf("got %d points in %lu ms. Frame Processing in %lu. Frame publishing in %lu. Total loop in %lu ms. Freq=%.1f Hz Serial2.available=%d\r\n",
-                       count, uart_elapsed, process_elapsed, publish_elapsed, total_loop_time, 1000.0 / loop_period, Serial2.available());
-        total_loop_time = millis();
-
-        vTaskDelay(pdMS_TO_TICKS(100)); // 10 Hz
-        }
-    uxTaskGetStackHighWaterMark(NULL);
+        vTaskDelayUntil(&lastWake, period);
+    }
 }
 
 void loop() {
-    // Empty loop
+
 }
