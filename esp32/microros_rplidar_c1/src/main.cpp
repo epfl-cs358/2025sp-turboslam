@@ -33,7 +33,6 @@
 #define TEST_ENCODER     0
 #define TEST_SERVO_DIR   0
 #define TEST_SERVO_LID   0
-#define ESC_PIN 15 
 
 // ESC signal pins
 constexpr int escSignalPin = 15;
@@ -53,39 +52,39 @@ auto joyy_sub      = rcl_get_zero_initialized_subscription();
 // std_msgs__msg__Float32        joyy_msg;
 
 void joyCallback(const void * msgin) {
-//   Serial.println("[JOY] joyCallback()");  
-//   const sensor_msgs__msg__Joy * joy = (const sensor_msgs__msg__Joy *)msgin;
-    const auto *joy = static_cast<const sensor_msgs__msg__Joy *>(msgin);
+// //   Serial.println("[JOY] joyCallback()");  
+// //   const sensor_msgs__msg__Joy * joy = (const sensor_msgs__msg__Joy *)msgin;
+//     const auto *joy = static_cast<const sensor_msgs__msg__Joy *>(msgin);
 
 
 
-  // Read axes from Joy message
-  float steer_axis  = joy->axes.data[0];   // left/right stick for steering
-  float brake_axis  = joy->axes.data[2];   // LT trigger for brake/reverse
-  float throttle_axis = joy->axes.data[5]; // RT trigger for throttle
+//   // Read axes from Joy message
+//   float steer_axis  = joy->axes.data[0];   // left/right stick for steering
+//   float brake_axis  = joy->axes.data[2];   // LT trigger for brake/reverse
+//   float throttle_axis = joy->axes.data[5]; // RT trigger for throttle
 
-  Serial.printf("[JOY] steer=%.2f, throttle=%.2f, brake=%.2f\n",
-    steer_axis, throttle_axis, brake_axis);
-    if (fabsf(steer_axis) < 0.05f) {
-        Serial.printf("[JOY] steer=%.2f\n", steer_axis);
-        steer_axis = 0.0f;
-    }
+//   Serial.printf("[JOY] steer=%.2f, throttle=%.2f, brake=%.2f\n",
+//     steer_axis, throttle_axis, brake_axis);
+//     if (fabsf(steer_axis) < 0.05f) {
+//         Serial.printf("[JOY] steer=%.2f\n", steer_axis);
+//         steer_axis = 0.0f;
+//     }
 
-    int steer_deg = (int)(90 + steer_axis * 10); // Map to servo angle
-    steer_deg = constrain(steer_deg, 85, 95); 
-    servo_dir.setAngle(steer_deg);
+//     int steer_deg = (int)(90 + steer_axis * 10); // Map to servo angle
+//     steer_deg = constrain(steer_deg, 85, 95); 
+//     servo_dir.setAngle(steer_deg);
 
-    // motor command
-    float forward = throttle_axis > 0 ? throttle_axis : 0;
-    float reverse = brake_axis > 0 ? brake_axis : 0;
-    float cmd_percent = forward - reverse;
-    cmd_percent = constrain(cmd_percent, -0.3f, 0.3f);
+//     // motor command
+//     float forward = throttle_axis > 0 ? throttle_axis : 0;
+//     float reverse = brake_axis > 0 ? brake_axis : 0;
+//     float cmd_percent = forward - reverse;
+//     cmd_percent = constrain(cmd_percent, -0.3f, 0.3f);
 
-    motor.setTargetPercent(cmd_percent);
+//     motor.setTargetPercent(cmd_percent);
 
-    Serial.printf(
-    "[JOY] steer=%.2f (deg=%d), throttle=%.2f, brake=%.2f → pct=%.2f\n",
-    steer_axis, steer_deg, throttle_axis, brake_axis, cmd_percent);
+//     Serial.printf(
+//     "[JOY] steer=%.2f (deg=%d), throttle=%.2f, brake=%.2f → pct=%.2f\n",
+//     steer_axis, steer_deg, throttle_axis, brake_axis, cmd_percent);
 
 
 //   // Map steering axis (-1 to +1) to servo pulse width (1000 to 2000 µs)
@@ -149,7 +148,7 @@ rcl_subscription_t motor_cmd_subscriber;
 std_msgs__msg__Int8 motor_cmd_msg;
 
 // Motor controller
-MotorController motor(ESC_PIN);
+MotorController motor(escSignalPin);
 
 // IMU
 ImuSensor imuSensor;
@@ -213,15 +212,10 @@ void servo_lid_callback(const void* msgin) {
 }
 
 // Motor callback
-// void motor_callback(const void* msgin) {
-//     const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-//     motor.setTargetPercent(float(cmd->data));
-//     printf("Motor cmd: %d\n", cmd->data);
-// }
-void motor_callback(const void * msgin)
-{
-    auto cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-    motor.command(cmd->data);            // –100 … +100 %
+void motor_callback(const void* msgin) {
+    const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+    motor.setTargetPercent(float(cmd->data));
+    printf("Motor cmd: %d\n", cmd->data);
 }
 
 rcl_ret_t init_ros() {
@@ -409,7 +403,7 @@ void servoLidTask(void *parameter);
 void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
-// void motorTask(void *parameter);
+void motorTask(void *parameter);
 
 
 // Setup function
@@ -443,15 +437,15 @@ void setup() {
 
     servoAngleQ = xQueueCreate(1, sizeof(int));
 
-    // BaseType_t motor_task = xTaskCreatePinnedToCore(motorTask, "Motor Task", 4096, NULL, 5, NULL, 1);
-    //     if (motor_task != pdPASS) {
-    //         Serial.println("Failed to create IMU Task");
-    //         esp_restart();
-    //     }
-    //     if (!motor.begin()) {
-    //         Serial.println("IMU failed to initialize, rebooting...");
-    //         esp_restart();
-    //     }
+    BaseType_t motor_task = xTaskCreatePinnedToCore(motorTask, "Motor Task", 4096, NULL, 5, NULL, 1);
+        if (motor_task != pdPASS) {
+            Serial.println("Failed to create IMU Task");
+            esp_restart();
+        }
+        if (!motor.begin()) {
+            Serial.println("IMU failed to initialize, rebooting...");
+            esp_restart();
+        }
 
     #if TEST_IMU
         BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 1, NULL, 1);
@@ -687,5 +681,6 @@ void loop() {
 //         break;
 //     }
 //   }
+
 
 
