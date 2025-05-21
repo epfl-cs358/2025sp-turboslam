@@ -10,8 +10,10 @@
 #include <sensor_msgs/msg/imu.h>
 #include <sensor_msgs/msg/nav_sat_fix.h>
 #include <std_msgs/msg/int32.h>
-#include "I2C_mutex.h"
+#include <std_msgs/msg/int8.h>
 
+#include "I2C_mutex.h"
+#include "MotorController.h"
 #include "credentials.h"
 #include "I2C_wire.h"
 #include "RplidarC1.h"
@@ -19,60 +21,60 @@
 #include "UltraSonicSensor.h"
 #include "AS5600Encoder.h"
 #include "DMS15.h"
-//#include "BrushedMotor.h"
 #include "NEO6M.h" 
 
-#define TEST_IMU 0
-#define TEST_ULTRASONIC 0
-#define TEST_ENCODER 0
-#define TEST_SERVO_DIR 0
-#define TEST_SERVO_LID 1
-#define TEST_SERVO_ANGLE_PUB 1
-#define TEST_GPS 0
-#define TEST_LIDAR 1
+#define TEST_IMU             0
+#define TEST_ULTRASONIC      0
+#define TEST_ENCODER         0
+#define TEST_SERVO_DIR       1
+#define TEST_SERVO_LID       0
+#define TEST_SERVO_ANGLE_PUB 0
+#define TEST_GPS             0
+#define TEST_LIDAR           0
+#define TEST_MOTOR           1
+
+#define ESC_PIN 15
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
-rclc_support_t support;
+rclc_support_t  support;
 rcl_publisher_t publisher;
-rcl_node_t node;
+rcl_node_t      node;
 // Lidar
 RplidarC1 lidar;
 // IMU
-ImuSensor imuSensor;
+ImuSensor       imuSensor;
 rcl_publisher_t imu_publisher;
 // Ultrasonic sensor
 UltraSonicSensor ultrasonic(10, 11);
-rcl_publisher_t range_publisher;
+rcl_publisher_t  range_publisher;
 // Encoder
-AS5600Encoder encoder;
+AS5600Encoder   encoder;
 rcl_publisher_t encoder_publisher;
 //Servo
-//To test run : $ ros2 topic pub /servo_lid/angle std_msgs/msg/Int32 "{data: 90}"
-DMS15 servo_dir(6); // servo used for the direcition of the car
-rcl_subscription_t servo_dir_subscriber;
+DMS15                servo_dir(6); // servo used for the direcition of the car
+rcl_subscription_t   servo_dir_subscriber;
 std_msgs__msg__Int32 servo_dir_angle_msg;
-DMS15 servo_lid(7); // servo used for tilting the lidar
-rcl_subscription_t servo_lid_subscriber;
+DMS15                servo_lid(7); // servo used for tilting the lidar
+rcl_subscription_t   servo_lid_subscriber;
 std_msgs__msg__Int32 servo_lid_angle_msg;
-// Servo_lid angle publisher
-// To test run : $ ros2 topic echo /lidar_servo_angle
-rcl_publisher_t servo_angle_publisher;
+rcl_publisher_t      servo_angle_publisher;
 std_msgs__msg__Int32 servo_angle_msg;
-
-rclc_executor_t executor;
-SemaphoreHandle_t ros_publish_mutex;
-QueueHandle_t servoAngleQ;
-
-// gps
-NEO6M gps(Serial2, 9600, 18, 17); 
-rcl_publisher_t gps_publisher;
+//gps
+NEO6M                       gps(Serial2, 9600, 18, 17); 
+rcl_publisher_t             gps_publisher;
 sensor_msgs__msg__NavSatFix gps_msg;
+// Motor
+rcl_subscription_t  motor_cmd_subscriber;
+std_msgs__msg__Int8 motor_cmd_msg;
+MotorController     motor(ESC_PIN);
 
+rclc_executor_t   executor;
+SemaphoreHandle_t ros_publish_mutex;
+QueueHandle_t     servoAngleQ;
 SemaphoreHandle_t i2c_mutex = xSemaphoreCreateMutex();
 
-#define RCCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
-#define RCSOFTCHECK(fn, msg) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
+#define RCCHECK(fn, msg)     { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("err=%d %s\r\n",temp_rc,msg);}return temp_rc;}
 
 void connect_wifi(){
     WiFi.disconnect(true); // Reset Wi-Fi
@@ -98,6 +100,11 @@ void servo_lid_callback(const void* msgin) {
     servo_lid.setAngle(msg->data);
     Serial.print("Received angle: ");
     Serial.println(msg->data);
+}
+
+void motor_callback(const void* msgin) {
+    const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
+    motor.setTargetPercent(float(cmd->data) * 0.2);
 }
 
 rcl_ret_t init_ros() {
@@ -254,13 +261,43 @@ rcl_ret_t init_ros() {
         }
     #endif
 
-    ret = rclc_executor_init(&executor, &support.context, 2, &allocator); // 2 = number of handles (subscribers)
+    #if TEST_MOTOR
+        // Motor control subscriber
+        ret = rclc_subscription_init_default(
+            &motor_cmd_subscriber,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int8),
+            "/motor_cmd"
+        );
+        if (ret != RCL_RET_OK) {
+            Serial.println("Failed to create motor_cmd subscriber");
+            esp_restart();
+        }
+    #endif
+
+    // Executor
+    ret = rclc_executor_init(&executor, &support.context, 3, &allocator); // 3 = number of handles (subscribers) (motor and 2 servos)
     if (ret != RCL_RET_OK) {
         Serial.println("Failed to initialize executor");
         return ret;
     }
     
     // Add subscriptions to executor
+    //Motor
+    #if TEST_MOTOR 
+        ret = rclc_executor_add_subscription(
+        &executor,
+        &motor_cmd_subscriber,
+        &motor_cmd_msg,
+        &motor_callback,
+        ON_NEW_DATA
+        );
+        if (ret != RCL_RET_OK) {
+            printf("Failed to add motor callback to executor: %d\n", ret);
+            return ret;
+        }
+    #endif
+
     //Servo dir
     #if TEST_SERVO_DIR
         ret = rclc_executor_add_subscription(
@@ -302,7 +339,7 @@ void executorTask(void *parameter);
 void wifiMonitorTask(void *parameter);
 void servoPublisherTask(void *parameter);
 void lidarTask(void *parameter);
-//void motorTask(void *parameter);
+void motorTask(void *parameter);
 void gpsTask(void *parameter);
 
 // Setup function
@@ -329,7 +366,7 @@ void setup() {
             Serial.println("IMU failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t imuTaskCreated = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 5, NULL, 1);
+        BaseType_t ` = xTaskCreatePinnedToCore(imuTask, "IMU Task", 4096, NULL, 5, NULL, 1);
         if (imuTaskCreated != pdPASS) {
             Serial.println("Failed to create IMU Task");
             esp_restart();
@@ -354,7 +391,7 @@ void setup() {
             Serial.println("Ultrasonic sensor failed to initialize, rebooting...");
             esp_restart();
         }
-        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 4096, NULL, 4, NULL, 0);
+        BaseType_t ultrasonicTaskCreated = xTaskCreatePinnedToCore(ultrasonicTask, "Ultrasonic Task", 2048, NULL, 4, NULL, 1);
         if (ultrasonicTaskCreated != pdPASS) {
             Serial.println("Failed to create Ultrasonic Task");
             esp_restart();
@@ -371,6 +408,19 @@ void setup() {
             Serial.println("Failed to create Servo Lid Task");
             esp_restart();
         }
+    #endif
+
+    #if TEST_SERVO_DIR
+        if(!servo_dir.begin()) {
+            Serial.println("Servo_dir failed to initialize, rebooting...");
+            esp_restart();
+        }
+        // servo_dir.setAngle(90); // angle to 90 (center position)
+        // BaseType_t servoDirTaskCreated = xTaskCreatePinnedToCore(servoDirTask, "Servo Dir Task", 2048, NULL, 5, NULL, 1);
+        // if (servoDirTaskCreated != pdPASS) {
+        //     Serial.println("Failed to create Servo Dir Task");
+        //     esp_restart();
+        // }
     #endif
 
     #if TEST_GPS
@@ -406,11 +456,24 @@ void setup() {
         }
     #endif
 
-    // BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 3, NULL, 0); // Higher priority
-    // if (executorTaskCreated != pdPASS) {
-    //     Serial.println("Failed to create Executor Task");
-    //     esp_restart();
-    // }
+    #if TEST_MOTOR
+        if (!motor.begin()) {
+            Serial.println("Motor failed to initialize, rebooting...");
+            esp_restart();
+        }
+        BaseType_t motorTaskCreated = xTaskCreatePinnedToCore(motorTask, "Motor Task", 2048, NULL, 5, NULL, 1);
+        if (motorTaskCreated != pdPASS) {
+            Serial.println("Failed to create Motor Task");
+            esp_restart();
+        }
+    #endif
+
+
+    BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 4096, NULL, 4, NULL, 0); // Higher priority
+    if (executorTaskCreated != pdPASS) {
+        Serial.println("Failed to create Executor Task");
+        esp_restart();
+    }
 
     BaseType_t wifiMonitorTaskCreated = xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 2048, NULL, 1, NULL, 0);
     if (wifiMonitorTaskCreated != pdPASS) {
@@ -478,6 +541,14 @@ void servoLidTask(void *parameter) {
     }
 }
 
+// void servoDirTask(void *parameter) {
+//     const TickType_t period = pdMS_TO_TICKS(20);
+//     TickType_t lastWake = xTaskGetTickCount();
+//     while (true) {
+//         ???
+//     }
+// }
+
 void servoPublisherTask(void *parameter) {
     std_msgs__msg__Int32 msg;
     int angle = 0;
@@ -537,9 +608,6 @@ void gpsTask(void*) {
     } 
 }
 
-unsigned long total_loop_time = 0L;
-float loop_period = 0.0;
-
 void lidarTask(void *parameter) {
     const TickType_t period = pdMS_TO_TICKS(100);  // 100 ms → 10 Hz
     TickType_t lastWake = xTaskGetTickCount();
@@ -558,6 +626,15 @@ void lidarTask(void *parameter) {
             xSemaphoreGive(ros_publish_mutex);
         }
         vTaskDelayUntil(&lastWake, period);
+    }
+}
+
+void motorTask(void*) {
+    const TickType_t period = pdMS_TO_TICKS(UPDATE_PERIOD_MS);
+    TickType_t lastWake = xTaskGetTickCount();
+    while (true) {
+        motor.update();
+        xTaskDelayUntil(&lastWake, period);
     }
 }
 
