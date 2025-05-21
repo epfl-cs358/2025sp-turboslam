@@ -17,7 +17,7 @@
 
 #include "ImuSensor.h"
 
-#include "UltraSonicSensor.h"
+#include "UltraSonicSensor.h" 
 
 #include "AS5600Encoder.h"
 
@@ -27,9 +27,10 @@
 #include <sensor_msgs/msg/joy.h>        // ROS2 Joy message type
 #include <std_msgs/msg/int32.h>        // ROS2 Int32 message type
 #include <std_msgs/msg/float32.h>
+#include <std_msgs/msg/bool.h>
 
 #define TEST_IMU         0
-#define TEST_ULTRASONIC  0
+#define TEST_ULTRASONIC  1
 #define TEST_ENCODER     0
 #define TEST_SERVO_DIR   0
 #define TEST_SERVO_LID   0
@@ -44,79 +45,6 @@ auto accel_sub     = rcl_get_zero_initialized_subscription();
 auto decel_sub     = rcl_get_zero_initialized_subscription();
 auto joyx_sub      = rcl_get_zero_initialized_subscription();
 auto joyy_sub      = rcl_get_zero_initialized_subscription();
-
-// sensor_msgs__msg__Joy         joy_msg;
-// std_msgs__msg__Float32        accel_msg;
-// std_msgs__msg__Float32        decel_msg;
-// std_msgs__msg__Float32        joyx_msg;
-// std_msgs__msg__Float32        joyy_msg;
-
-void joyCallback(const void * msgin) {
-// //   Serial.println("[JOY] joyCallback()");  
-// //   const sensor_msgs__msg__Joy * joy = (const sensor_msgs__msg__Joy *)msgin;
-//     const auto *joy = static_cast<const sensor_msgs__msg__Joy *>(msgin);
-
-
-
-//   // Read axes from Joy message
-//   float steer_axis  = joy->axes.data[0];   // left/right stick for steering
-//   float brake_axis  = joy->axes.data[2];   // LT trigger for brake/reverse
-//   float throttle_axis = joy->axes.data[5]; // RT trigger for throttle
-
-//   Serial.printf("[JOY] steer=%.2f, throttle=%.2f, brake=%.2f\n",
-//     steer_axis, throttle_axis, brake_axis);
-//     if (fabsf(steer_axis) < 0.05f) {
-//         Serial.printf("[JOY] steer=%.2f\n", steer_axis);
-//         steer_axis = 0.0f;
-//     }
-
-//     int steer_deg = (int)(90 + steer_axis * 10); // Map to servo angle
-//     steer_deg = constrain(steer_deg, 85, 95); 
-//     servo_dir.setAngle(steer_deg);
-
-//     // motor command
-//     float forward = throttle_axis > 0 ? throttle_axis : 0;
-//     float reverse = brake_axis > 0 ? brake_axis : 0;
-//     float cmd_percent = forward - reverse;
-//     cmd_percent = constrain(cmd_percent, -0.3f, 0.3f);
-
-//     motor.setTargetPercent(cmd_percent);
-
-//     Serial.printf(
-//     "[JOY] steer=%.2f (deg=%d), throttle=%.2f, brake=%.2f → pct=%.2f\n",
-//     steer_axis, steer_deg, throttle_axis, brake_axis, cmd_percent);
-
-
-//   // Map steering axis (-1 to +1) to servo pulse width (1000 to 2000 µs)
-//   int steering_us = (int)(1500 + steer_axis * 500);  // centered at 1500 µs, ±500 µs range
-//   steering_us = constrain(steering_us, 1400, 1600);  // clamp to [1000,2000] just in case
-//   steeringServo.writeMicroseconds(steering_us);
-
-//   // Determine throttle/reverse for ESC. Neutral is 1500 µs.
-//   float forward = 0.0f;
-//   float reverse = 0.0f;
-//   // Some controllers report triggers 0.0 to 1.0, others -1.0 to 1.0. Adjust if needed:
-//   if (throttle_axis < -0.1f || brake_axis < -0.1f) {
-//     // If axes are in [-1,1] range, normalize them to [0,1]
-//     forward = (throttle_axis + 1.0f) / 2.0f;
-//     reverse = (brake_axis   + 1.0f) / 2.0f;
-//   } else {
-//     // Assume already 0 to 1
-//     forward = (throttle_axis > 0.0f) ? throttle_axis : 0.0f;
-//     reverse = (brake_axis   > 0.0f) ? brake_axis   : 0.0f;
-//   }
-
-//   int esc_us = 1500; // start at neutral
-//   if (reverse > 0.05f) {
-//     // Brake/Reverse active – map to 1500 down to 1000 µs
-//     esc_us = (int)(1500 - reverse * 500);   // full reverse = ~1000 µs
-//   } else if (forward > 0.05f) {
-//     // Throttle active – map to 1500 up to 2000 µs
-//     esc_us = (int)(1500 + forward * 500);   // full throttle = ~2000 µs
-//   } 
-//   esc_us = constrain(esc_us, 1000, 2000);
-//   escServo.writeMicroseconds(esc_us);
-}
 
 void accelCallback(const void * msgin) {
 const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
@@ -158,6 +86,10 @@ sensor_msgs__msg__Imu imu_msg;
 // Ultrasonic sensor
 UltraSonicSensor ultrasonic(25, 12);  
 rcl_publisher_t range_publisher;
+
+rcl_publisher_t emerg_stop_publisher;
+std_msgs__msg__Bool estop_msg;// 
+volatile float last_d_ultrasonic = 999.0f; // random value just to init
 
 // Encoder
 AS5600Encoder encoder;
@@ -281,6 +213,16 @@ rcl_ret_t init_ros() {
     );
     if (ret != RCL_RET_OK) {
         printf("ultrasonic publisher init failed: %d\n", ret);
+        return ret;
+    }
+    ret = rclc_publisher_init_default(
+        &emerg_stop_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+        "/emerg_stop"
+    );
+    if (ret != RCL_RET_OK) {
+        printf("emergency stop publisher init failed: %d\n", ret);
         return ret;
     }
 
@@ -541,15 +483,24 @@ void ultrasonicTask(void *parameter) {
     while (true) {
         float dist = ultrasonic.readDistance();
         if (dist > 0) {
+
+            last_d_ultrasonic = dist;
             ultrasonic.range_msg.range = dist;
             ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
             ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
-            rcl_ret_t ret = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
-            if (ret != RCL_RET_OK) {
-                printf("rcl_publish ultrasonic error=%d\r\n", ret);
+            rcl_ret_t ret1 = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
+            if (ret1 != RCL_RET_OK) {
+                printf("rcl_publish ultrasonic error=%d\r\n", ret1);
+            }
+
+            bool stop = (dist < UltraSonicSensor::STOP_THRESHOLD);
+            estop_msg.data = stop;
+            rcl_ret_t ret2 = rcl_publish(&emerg_stop_publisher, &estop_msg, NULL);
+            if (ret2 != RCL_RET_OK) {
+                printf("rcl_publish emerg error=%d\r\n", ret2);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(50)); // 20Hz
+        vTaskDelay(pdMS_TO_TICKS(25)); // 40Hz
     }
     uxTaskGetStackHighWaterMark(NULL);
 }
@@ -621,66 +572,4 @@ void motorTask(void*) {
 void loop() {
   
 }
-
-
-
-
-// #include <Arduino.h>
-// #include "MotorController.h"
-
-// // ESC signal pin
-// constexpr int escSignalPin = 15;
-
-// // Create our MotorController
-// MotorController motor(escSignalPin);
-
-// void setup() {
-//     pinMode(LED_BUILTIN, OUTPUT);
-
-//     Serial.begin(115200);
-//     for (int i = 0; i < 6; i++) {
-//         digitalWrite(LED_BUILTIN, HIGH);
-//         delay(200);
-//         digitalWrite(LED_BUILTIN, LOW);
-//         delay(200);
-//     }
-//     Serial.println("Hello from setup!");
-//     while (!Serial) {}  
-//     Serial.println("\nREADY: f=forward, r=reverse, s=stop");
-
-//     // Attach & arm ESC
-//     if (!motor.begin()) {
-//       Serial.println("ERROR: ESC failed to attach!");
-//       while (1) delay(100);
-//     }
-//     Serial.println("ESC armed (neutral).");
-// }
-
-// void loop() {
-//     if (!Serial.available()) {
-//       delay(10);
-//       return;
-//     }
-
-//     char c = Serial.read();
-//     switch (c) {
-//       case 'w': case 'W':
-//         Serial.println("→ FORWARD");
-//         motor.command(1650);  // 2 ms pulse = full forward
-//         break;
-//       case 's': case 'S':
-//         Serial.println("← REVERSE");
-//         motor.command(1350);  // 1 ms pulse = full reverse
-//         break;
-//       case 'b': case 'B':
-//         Serial.println("⏸ STOP");
-//         motor.command(1500);  // 1.5 ms pulse = neutral/brake
-//         break;
-//       default:
-//         // ignore any other character
-//         break;
-//     }
-//   }
-
-
 

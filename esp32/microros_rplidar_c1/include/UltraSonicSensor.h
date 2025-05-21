@@ -6,11 +6,13 @@
 
 class UltraSonicSensor {
 public:
+    
     UltraSonicSensor(uint8_t triggerPin, uint8_t echoPin);
 
     bool begin();
     float readDistance();
     sensor_msgs__msg__Range range_msg;
+    static constexpr float STOP_THRESHOLD = 0.30f; //30cm threshold
 
 private:
     uint8_t trigPin;

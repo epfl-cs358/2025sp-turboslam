@@ -50,21 +50,4 @@ MotorController::MotorController(int pwmPin)
     _esc.writeMicroseconds(_currentUs);
   }
 
-  // /// Drive the motor: +1 forward, -1 reverse, 0 stop
-  // void MotorController::command(int dir) {
-  //   // Convert direction to microseconds
-  //   int targetUs = dir;
-  //   int currentUs = _esc.readMicroseconds();
-  //   const int step = 5; // Adjust step size for smoother acceleration/deceleration
-  //   // Gradually change speed until target is reached
-  //   while (currentUs != targetUs) {
-  //     if (currentUs < targetUs) {
-  //       currentUs = min(currentUs + step, targetUs);
-  //     } else {
-  //       currentUs = max(currentUs - step, targetUs);
-  //     }
-  //     _esc.writeMicroseconds(currentUs);
-  //     delay(50); // Small delay for stability
-  //   }
-  // }
-
+ 

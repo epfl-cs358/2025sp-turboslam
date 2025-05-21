@@ -4,8 +4,8 @@ UltraSonicSensor::UltraSonicSensor(uint8_t triggerPin, uint8_t echoPin)
     : trigPin(triggerPin), echoPin(echoPin) {}
 
 bool UltraSonicSensor::begin() {
-    pinMode(trigPin, INPUT);
-    pinMode(echoPin, OUTPUT);
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
 
     range_msg.radiation_type = sensor_msgs__msg__Range__ULTRASOUND;
     range_msg.field_of_view = 0.26; // Approximate for HC-SR04
