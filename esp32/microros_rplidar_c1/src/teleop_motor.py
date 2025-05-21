@@ -1,37 +1,4 @@
-# # teleop_motor.py
-# import sys, tty, termios
-# import rclpy
-# from rclpy.node import Node
-# from std_msgs.msg import Int8
 
-# class Teleop(Node):
-#     def __init__(self):
-#         super().__init__('teleop_motor')
-#         self.pub = self.create_publisher(Int8, 'motor_cmd', 10)
-#         self.get_logger().info('Use ↑/↓ to drive motor')
-#         self.orig = termios.tcgetattr(sys.stdin)
-#     def run(self):
-#         tty.setraw(sys.stdin)
-#         while True:
-#             ch = sys.stdin.read(1)
-#             if ch == '\x1b':  # start of arrow key
-#                 sys.stdin.read(1)
-#                 c2 = sys.stdin.read(1)
-#                 msg = Int8()
-#                 msg.data = 1 if c2=='A' else -1 if c2=='B' else 0
-#                 self.pub.publish(msg)
-#             elif ch == 'q':
-#                 break
-#         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.orig)
-
-# def main():
-#     rclpy.init()
-#     t = Teleop()
-#     t.run()
-#     rclpy.shutdown()
-
-# if __name__=='__main__':
-#     main()
 
 #!/usr/bin/env python3
 import sys, tty, termios, select, time
@@ -59,13 +26,14 @@ class Teleop(Node):
         self.drive_timeout = 0.2  # seconds to wait before assuming release
 
         # Terminal setup
-        self.orig_attrs = termios.tcgetattr(sys.stdin)
-        tty.setcbreak(sys.stdin)
+        self.fd = sys.stdin.fileno()
+        self.orig_attrs = termios.tcgetattr(self.fd)
+        tty.setcbreak(self.fd)
 
         self.get_logger().info("Use W/S to drive, A/D to steer, X to stop, Q to quit. Key releases are detected after a timeout of 0.2 seconds.")
 
     def restore_terminal(self):
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.orig_attrs)
+        termios.tcsetattr(sys.fd, termios.TCSADRAIN, self.orig_attrs)
 
     def publish_drive(self, val:int):
         msg = Int8()
