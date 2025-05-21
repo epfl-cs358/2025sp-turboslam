@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python3
 import sys, tty, termios, select, time
 
@@ -15,9 +13,11 @@ class Teleop(Node):
         self.steer_pub = self.create_publisher(Int32, 'servo_dir/angle', 10)
 
         # Teleop state
-        self.drive_power = 1     # Int8: Motor driving power, constrained to -1 (reverse), 0 (stop), or 1 (forward)
-        self.angle       = 90    # starting at center
+        self.drive_power = 0.3   # Motor driving power, limited to -0.3 to 0.3
+        self.angle       = 90    # starting at center (90 degrees)
         self.step_deg    = 5
+        self.min_angle   = 60    # minimum steering angle (30 degrees left of center)
+        self.max_angle   = 120   # maximum steering angle (30 degrees right of center)
 
         # Key‐hold tracking
         self.w_held = False
@@ -31,11 +31,13 @@ class Teleop(Node):
         tty.setcbreak(self.fd)
 
         self.get_logger().info("Use W/S to drive, A/D to steer, X to stop, Q to quit. Key releases are detected after a timeout of 0.2 seconds.")
+        self.get_logger().info(f"Steering limited to {self.min_angle}° - {self.max_angle}° (±30° from center)")
+        self.get_logger().info(f"Drive power limited to ±{self.drive_power}")
 
     def restore_terminal(self):
         termios.tcsetattr(sys.fd, termios.TCSADRAIN, self.orig_attrs)
 
-    def publish_drive(self, val:int):
+    def publish_drive(self, val:float):
         msg = Int8()
         msg.data = val
         self.motor_pub.publish(msg)
@@ -69,10 +71,10 @@ class Teleop(Node):
                         self.w_held = self.s_held = False
                         self.publish_drive(0)
                     elif c == 'a':
-                        self.angle = max(0, self.angle - self.step_deg)
+                        self.angle = max(self.min_angle, self.angle - self.step_deg)
                         self.publish_steer()
                     elif c == 'd':
-                        self.angle = min(180, self.angle + self.step_deg)
+                        self.angle = min(self.max_angle, self.angle + self.step_deg)
                         self.publish_steer()
 
                 # 2) Detect release (timeout)
