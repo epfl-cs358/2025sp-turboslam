@@ -11,6 +11,7 @@
 #include <sensor_msgs/msg/nav_sat_fix.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/int8.h>
+#include <std_msgs/msg/bool.h> //a verigier sarah 
 
 #include "I2C_mutex.h"
 #include "MotorController.h"
@@ -24,7 +25,7 @@
 #include "NEO6M.h" 
 
 #define TEST_IMU             0
-#define TEST_ULTRASONIC      0
+#define TEST_ULTRASONIC      1
 #define TEST_ENCODER         0
 #define TEST_SERVO_DIR       1
 #define TEST_SERVO_LID       0
@@ -45,9 +46,18 @@ RplidarC1 lidar;
 // IMU
 ImuSensor       imuSensor;
 rcl_publisher_t imu_publisher;
+
 // Ultrasonic sensor
 UltraSonicSensor ultrasonic(10, 11);
 rcl_publisher_t  range_publisher;
+
+volatile float last_dist = 999.0f ; //arbitrary value just to init
+volatile bool g_obstacle = false;
+constexpr int CLEAR_CYCLES = 5;
+static int clear_timer = CLEAR_CYCLES;
+rcl_publisher_t estop_pub;
+std_msgs__msg__Bool estop_msg;
+
 // Encoder
 AS5600Encoder   encoder;
 rcl_publisher_t encoder_publisher;
@@ -189,6 +199,18 @@ rcl_ret_t init_ros() {
             printf("ultrasonic publisher init failed: %d\n", ret);
             return ret;
         }
+        ret = rclc_publisher_init_default(
+            &estop_pub,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+            "/emergency_stop"
+        );
+        if (ret != RCL_RET_OK) {
+            printf("emergency stop publisher init failed: %d\n", ret);
+            return ret;
+        }
+
+
     #endif
 
     // Encoder
@@ -517,6 +539,7 @@ void ultrasonicTask(void *parameter) {
             ultrasonic.range_msg.range = dist;
             ultrasonic.range_msg.header.stamp.sec = millis() / 1000;
             ultrasonic.range_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+
             if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
                 rcl_ret_t ret = rcl_publish(&range_publisher, &ultrasonic.range_msg, NULL);
                 if (ret != RCL_RET_OK) {
@@ -524,6 +547,17 @@ void ultrasonicTask(void *parameter) {
                 }
                 xSemaphoreGive(ros_publish_mutex);
             }
+
+            g_obstacle = (dist < UltraSonicSensor::STOP_THRESHOLD);
+            estop_msg.data = g_obstacle;
+            if (xSemaphoreTake(ros_publish_mutex, portMAX_DELAY) == pdTRUE) {
+                rcl_ret_t ret = rcl_publish(&estop_pub, &estop_msg, NULL);
+                if (ret != RCL_RET_OK) {
+                    printf("rcl_publish emergency stop error=%d\r\n", ret);
+                }
+                xSemaphoreGive(ros_publish_mutex);
+            }
+
         }
         vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz
     }
@@ -633,6 +667,13 @@ void motorTask(void*) {
     const TickType_t period = pdMS_TO_TICKS(UPDATE_PERIOD_MS);
     TickType_t lastWake = xTaskGetTickCount();
     while (true) {
+         if (g_obstacle){
+            motor.emergencyStop();
+            clear_timer = CLEAR_CYCLES;
+         } else if (clear_timer){
+            --clear_timer;
+         }
+
         motor.update();
         xTaskDelayUntil(&lastWake, period);
     }

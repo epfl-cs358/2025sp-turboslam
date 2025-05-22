@@ -3,14 +3,26 @@ import sys, tty, termios, select, time
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8, Int32
+from std_msgs.msg import Int8, Int32, Bool
+import sys, termios, tty, select
+
+obstacle = False
+
+def obstacle_callback(msg):
+        global obstacle
+        obstacle = msg.data    
 
 class Teleop(Node):
+
+
     def __init__(self):
         super().__init__('teleop_keyboard')
         # Publishers
         self.motor_pub = self.create_publisher(Int8,  'motor_cmd',      10)
         self.steer_pub = self.create_publisher(Int32, 'servo_dir/angle', 10)
+
+        #Subscriber
+        self.create_subscription(Bool, '/emergency_stop', obstacle_callback,10)
 
         # Teleop state
         self.drive_power = 1   # Motor driving power, limited to -0.3 to 0.3
@@ -33,6 +45,7 @@ class Teleop(Node):
         self.get_logger().info("Use W/S to drive, A/D to steer, X to stop, Q to quit. Key releases are detected after a timeout of 0.2 seconds.")
         self.get_logger().info(f"Steering limited to {self.min_angle}° - {self.max_angle}° (±30° from center)")
         self.get_logger().info(f"Drive power limited to ±{self.drive_power}")
+
 
     def restore_terminal(self):
         termios.tcsetattr(sys.fd, termios.TCSADRAIN, self.orig_attrs)
@@ -58,10 +71,14 @@ class Teleop(Node):
                     if c == 'q':
                         break
                     elif c == 'w':
-                        self.w_held = True
-                        self.s_held = False
-                        self.last_drive_ts = time.time()
-                        self.publish_drive(self.drive_power)
+                        if obstacle:
+                            self.w_held = self.s_held = False
+                            self.publish_drive(0)
+                        else:
+                            self.w_held = True
+                            self.s_held = False
+                            self.last_drive_ts = time.time()
+                            self.publish_drive(self.drive_power)
                     elif c == 's':
                         self.s_held = True
                         self.w_held = False

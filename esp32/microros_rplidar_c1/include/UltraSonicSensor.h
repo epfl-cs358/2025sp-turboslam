@@ -11,6 +11,7 @@ public:
     bool begin();
     float readDistance();
     sensor_msgs__msg__Range range_msg;
+    static constexpr float STOP_THRESHOLD = 0.50f;
 
 private:
     uint8_t trigPin;

@@ -37,6 +37,10 @@ MotorController::MotorController(int pwmPin)
       setTargetUs(NEUTRAL_US + uint16_t(p * (NEUTRAL_US - MAX_REVERSE_US)));
     }
   }
+  
+  void MotorController::emergencyStop(){
+    if (_targetUs > NEUTRAL_US) setTargetUs(NEUTRAL_US);
+  }
 
   void MotorController::update() {
     // Gradually change speed until target is reached
