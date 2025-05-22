@@ -12,6 +12,7 @@
         "initializer_list": "cpp",
         "regex": "cpp",
         "memory": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "chrono": "cpp"
     }
 }
