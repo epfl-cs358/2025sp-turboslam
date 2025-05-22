@@ -13,7 +13,7 @@ class Teleop(Node):
         self.steer_pub = self.create_publisher(Int32, 'servo_dir/angle', 10)
 
         # Teleop state
-        self.drive_power = 0.3   # Motor driving power, limited to -0.3 to 0.3
+        self.drive_power = 1   # Motor driving power, limited to -0.3 to 0.3
         self.angle       = 90    # starting at center (90 degrees)
         self.step_deg    = 5
         self.min_angle   = 60    # minimum steering angle (30 degrees left of center)
