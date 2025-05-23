@@ -2,10 +2,26 @@ Takes LaserScan messages from topic `/scan` and servo angle (Int32) from topic `
 
 Assumes that the servo angle is in degrees and that the horizontal position is 90 degrees (range 0–180).
 
-## Run on recorded bag file
+# TLDR: one command to run
 
 ```bash
-ros2 bag play -l lidar_servoAngle_imu_3hz_8hz_8hz --clock
+ros2 launch tilt_lidar_node view_tilt_lidar_launch.py
+```
+
+or if using ros bag recording:
+
+```bash
+ros2 launch tilt_lidar_node view_tilt_lidar_sim_launch.py
+```
+
+# Manual way
+
+## Run on recorded bag file
+
+In directory `backend/bag_files`, run:
+
+```bash
+ros2 bag play -l lidar_servo_imu_pcl_slow_10hz_5hz_10hz --clock
 ```
 
 in another terminal:

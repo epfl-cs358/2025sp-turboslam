@@ -53,4 +53,22 @@ ament_target_dependencies(tilt_lidar_node
   rclcpp sensor_msgs std_msgs geometry_msgs tf2 tf2_ros laser_geometry)
 install(TARGETS tilt_lidar_node DESTINATION lib/${PROJECT_NAME})
 
+# install launch files
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# install rviz config
+install(
+  DIRECTORY rviz
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# install bag directory
+install(
+  DIRECTORY bag
+  DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()
