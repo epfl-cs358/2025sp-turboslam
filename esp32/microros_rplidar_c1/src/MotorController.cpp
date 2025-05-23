@@ -38,6 +38,10 @@ MotorController::MotorController(int pwmPin)
     }
   }
 
+  void MotorController::emergencyStop(){
+    if (_targetUs > NEUTRAL_US) setTargetUs(NEUTRAL_US);
+  }
+
   void MotorController::update() {
     // Gradually change speed until target is reached
     if (_currentUs == _targetUs) { return; }

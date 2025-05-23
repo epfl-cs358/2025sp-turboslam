@@ -22,6 +22,8 @@ public:
 
   void setTargetPercent(float p);
 
+  void emergencyStop();
+
   void update();
 
   uint16_t currentUs() const { return _currentUs;}

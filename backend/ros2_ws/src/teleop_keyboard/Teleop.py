@@ -5,7 +5,13 @@ import termios
 import select
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8, Int32
+from std_msgs.msg import Int8, Int32, Bool
+
+obstacle = False
+
+def obstacle_callback(msg):
+        global obstacle
+        obstacle = msg.data
 
 class Teleop(Node):
     def __init__(self):
@@ -13,6 +19,9 @@ class Teleop(Node):
         # Publishers
         self.motor_pub = self.create_publisher(Int8,  'motor_cmd',       10)
         self.steer_pub = self.create_publisher(Int32, 'servo_dir/angle', 10)
+
+        #Subscriber
+        self.create_subscription(Bool, '/emergency_stop', obstacle_callback,10)
 
         # Teleop state
         self.drive_power = 1   # –1 … +1 mapped to Int8
@@ -56,7 +65,10 @@ class Teleop(Node):
                         break
                     elif c == 'w':
                         # start forward motion
-                        self.publish_drive(self.drive_power)
+                        if obstacle:
+                            self.publish_drive(0)
+                        else :    
+                            self.publish_drive(self.drive_power)
                     elif c == 's':
                         # start backward motion
                         self.publish_drive(-self.drive_power)
