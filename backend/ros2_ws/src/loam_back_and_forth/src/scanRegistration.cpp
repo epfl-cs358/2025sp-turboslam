@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +14,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>  
@@ -190,7 +190,7 @@ void AccumulateIMUShift()
 }
 
 //void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
-void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr& laserCloudIn2)
+void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudIn2)
 {
   std::cout << "[LOAM] Handling laser cloud" << std::endl;
 
@@ -262,7 +262,7 @@ void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr& laserClou
     *laserCloudExtreCur += *laserCloudLessExtreCur;
     pcl::toROSMsg(*laserCloudExtreCur + *imuTrans, laserCloudLast2);
     //laserCloudLast2.header.stamp = ros::Time().fromSec(timeScanLast);
-    laserCloudLast2.header.stamp = clcpp::Time(timeScanLast * 1e9);
+    laserCloudLast2.header.stamp = rclcpp::Time(timeScanLast * 1e9);
     laserCloudLast2.header.frame_id = "camera";
 
     laserCloudExtreCur->clear();
@@ -684,7 +684,7 @@ int main(int argc, char** argv)
   // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
   //                          ("/imu/daata", 5, imuHandler);
   auto subImu = node->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu/daata", 5, imuHandler);
+    "/imu/data", 5, imuHandler);
 
   // ros::Subscriber subSweep = nh.subscribe<std_msgs::Empty>
   //                            ("/new_sweep", 5, sweepHandler);
@@ -701,6 +701,8 @@ int main(int argc, char** argv)
   auto pubLaserCloudLast = node->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/laser_cloud_last", 2);
 
+  // pubLaserCloudExtreCurPointer = &pubLaserCloudExtreCur;
+  // pubLaserCloudLastPointer = &pubLaserCloudLast;
   pubLaserCloudExtreCurPointer = pubLaserCloudExtreCur;
   pubLaserCloudLastPointer = pubLaserCloudLast;
 
