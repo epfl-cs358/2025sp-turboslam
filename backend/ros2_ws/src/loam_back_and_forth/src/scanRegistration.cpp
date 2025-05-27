@@ -8,6 +8,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/empty.hpp>
+#include "std_msgs/msg/int32.hpp"
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -192,7 +193,7 @@ void AccumulateIMUShift()
 //void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudIn2)
 {
-  std::cout << "[LOAM] Handling laser cloud" << std::endl;
+  // std::cout << "[LOAM] Handling laser cloud" << std::endl;
 
   if (!systemInited) {
     initTime = rclcpp::Time(laserCloudIn2->header.stamp).seconds();
@@ -627,7 +628,9 @@ if (skipFrameCount >= skipFrameNum) {
   imuTrans->clear();
 
   pubLaserCloudLastPointer->publish(laserCloudLast2);
-  std::cout << "[LOAM] publish laser cloud last" << std::endl;
+  // std::cout << "[LOAM] publish laser cloud last" << std::endl;
+  // ROS_INFO("publish laser cloud last (%d, %d)", laserCloudLast2.width, laserCloudExtreCur2.width);
+  // std::cout << "publish laser cloud last (" << laserCloudLast2.width << ", " << laserCloudExtreCur2.width << ")" << std::endl;
 
   }//ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
 
@@ -662,12 +665,35 @@ void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuIn)
   imuAccY[imuPointerLast] = accY;
   imuAccZ[imuPointerLast] = accZ;
 
+  // std::cout << "IMU handler (" << imuRoll[imuPointerLast] << ", " << imuPitch[imuPointerLast] << ", " << imuYaw[imuPointerLast] << ")" << std::endl;
   AccumulateIMUShift();
 }
 
-void sweepHandler(const std_msgs::msg::Empty::SharedPtr /*unused*/)
+// void sweepHandler(const std_msgs::msg::Empty::SharedPtr /*unused*/)
+// {
+//   newSweep = true;
+// }
+
+int  lastServoAngle    = -1;   // uninitialized
+int  currentServoAngle = -1;
+int  lastDirection     = -1;   // -1 = unknown, 0 = decreasing, 1 = increasing
+
+void servoSweepHandler(const std_msgs::msg::Int32::SharedPtr servoAngle)
 {
-  newSweep = true;
+  // std::cout << "[LOAM] Servo sweep: " << servoAngle->data << std::endl;
+  lastServoAngle = currentServoAngle;
+  currentServoAngle = servoAngle->data;
+  if (lastServoAngle < 0 || lastServoAngle == currentServoAngle) return;
+
+  int currentDirection = currentServoAngle > lastServoAngle ? 1 : 0;
+
+  // if servo starts moving in the opposite direction, a sweep just happened
+  if (currentDirection != lastDirection) {
+    std::cout << "[LOAM] Servo new sweep: " << servoAngle->data << std::endl;
+    newSweep = true;
+  }
+  
+  lastDirection = currentDirection;
 }
 
 int main(int argc, char** argv)
@@ -679,17 +705,21 @@ int main(int argc, char** argv)
   // ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
   //                                 ("/sync_scan_cloud_filtered", 2, laserCloudHandler);
   auto subLaserCloud = node->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/sync_scan_cloud_filtered", 2, laserCloudHandler);
+    "/point_cloud", 2, laserCloudHandler);
 
   // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
   //                          ("/imu/daata", 5, imuHandler);
   auto subImu = node->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu/data", 5, imuHandler);
+    "/imu", 5, imuHandler);
 
-  // ros::Subscriber subSweep = nh.subscribe<std_msgs::Empty>
-  //                            ("/new_sweep", 5, sweepHandler);
-  auto subSweep = node->create_subscription<std_msgs::msg::Empty>(
-    "/new_sweep", 5, sweepHandler);
+  // // ros::Subscriber subSweep = nh.subscribe<std_msgs::Empty>
+  // //                            ("/new_sweep", 5, sweepHandler);
+  // auto subSweep = node->create_subscription<std_msgs::msg::Empty>(
+  //   "/new_sweep", 5, sweepHandler);
+
+  // we use directly the servo angle for determining the sweep
+  auto subServoAngle = node->create_subscription<std_msgs::msg::Int32>(
+    "/lidar_servo_angle", 5, servoSweepHandler);
 
   // ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
   //                                        ("/laser_cloud_extre_cur", 2);
