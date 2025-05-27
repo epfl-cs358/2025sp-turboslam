@@ -77,6 +77,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(pcl_conversions REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 include_directories(
@@ -102,22 +103,34 @@ target_link_libraries(transformMaintenance_bf ${PCL_LIBRARIES} ${OpenCV_LIBS})
 # Let ROS 2 know the dependencies for each target
 ament_target_dependencies(scanRegistration_bf
   rclcpp sensor_msgs std_msgs geometry_msgs nav_msgs
-  tf2 tf2_ros tf2_geometry_msgs
+  tf2 tf2_ros tf2_geometry_msgs pcl_conversions
 )
 
 ament_target_dependencies(laserOdometry_bf
   rclcpp sensor_msgs std_msgs geometry_msgs nav_msgs
-  tf2 tf2_ros tf2_geometry_msgs
+  tf2 tf2_ros tf2_geometry_msgs pcl_conversions
 )
 
 ament_target_dependencies(laserMapping_bf
   rclcpp sensor_msgs std_msgs geometry_msgs nav_msgs
-  tf2 tf2_ros tf2_geometry_msgs
+  tf2 tf2_ros tf2_geometry_msgs pcl_conversions
 )
 
 ament_target_dependencies(transformMaintenance_bf
   rclcpp sensor_msgs std_msgs geometry_msgs nav_msgs
-  tf2 tf2_ros tf2_geometry_msgs
+  tf2 tf2_ros tf2_geometry_msgs pcl_conversions
+)
+
+# install launch files
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# install rviz config
+install(
+  DIRECTORY rviz_cfg
+  DESTINATION share/${PROJECT_NAME}
 )
 
 # Install targets

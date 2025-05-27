@@ -1,5 +1,5 @@
-#include <math.h>
-#include <time.h>
+#include <cmath>
+#include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 #include "rclcpp/rclcpp.hpp"
@@ -18,11 +18,14 @@
 
 // tf a tf2
 #include <tf2/LinearMath/Transform.h>       
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp> 
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h> 
 
 // #include <opencv/cv.h>
 // #include <opencv2/highgui/highgui.hpp> need to use open cv2
-#include <opencv2/core/core/hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 
@@ -281,11 +284,11 @@ void laserCloudExtreCurHandler(const sensor_msgs::msg::PointCloud2::SharedPtr la
 {
   if (!systemInited) {
     //initTime = laserCloudExtreCur2->header.stamp.toSec();
-    initTime = rclcpp::Time(laserCloudExtreCur2->header.stamp).seconds;
+    initTime = rclcpp::Time(laserCloudExtreCur2->header.stamp).seconds();
     systemInited = true;
   }
   //timeLaserCloudExtreCur = laserCloudExtreCur2->header.stamp.toSec();
-  timeLaserCloudExtreCur = rclcpp::Time(laserCloudExtreCur2->header.stamp).seconds;
+  timeLaserCloudExtreCur = rclcpp::Time(laserCloudExtreCur2->header.stamp).seconds();
   timeLasted = timeLaserCloudExtreCur - initTime;
 
   pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreCur3(new pcl::PointCloud<pcl::PointXYZHSV>());
@@ -335,7 +338,7 @@ void laserCloudLastHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserC
   //if (laserCloudLast2->header.stamp.toSec() > timeLaserCloudLast + 0.005) {
   if (rclcpp::Time(laserCloudLast2->header.stamp).seconds() > timeLaserCloudLast + 0.005) {
     //timeLaserCloudLast = laserCloudLast2->header.stamp.toSec();
-    timeLaserCloudLast = rclcpp::Time(laserCloudLast2->header.stamp).seconds()
+    timeLaserCloudLast = rclcpp::Time(laserCloudLast2->header.stamp).seconds();
     startTimeLast = startTimeCur;
     startTimeCur = timeLaserCloudLast - initTime;
 
@@ -419,7 +422,7 @@ int main(int argc, char** argv)
 
   // ros::Subscriber subLaserCloudLast = nh.subscribe<sensor_msgs::PointCloud2> 
   //                                     ("/laser_cloud_last", 2, laserCloudLastHandler);
-  auto subLaserCloudExtreCur = node->create_subscription<sensor_msgs::msg::PointCloud2>
+  auto subLaserCloudLast = node->create_subscription<sensor_msgs::msg::PointCloud2>
                                               ("/laser_cloud_last", 2, laserCloudLastHandler);
 
   // ros::Publisher pubLaserCloudLast2 = nh.advertise<sensor_msgs::PointCloud2> ("/laser_cloud_last_2", 2);
@@ -452,7 +455,6 @@ int main(int argc, char** argv)
   // laserOdometryTrans.child_frame_id_ = "/camera";
 
   tf2_ros::TransformBroadcaster tfBroadcaster(node);
-  tf2::Stamped<Transform> laserOdometryTransStamped();
   geometry_msgs::msg::TransformStamped laserOdometryTrans; 
   laserOdometryTrans.header.frame_id = "/camera_init"; 
   laserOdometryTrans.child_frame_id = "/camera";       
@@ -462,7 +464,7 @@ int main(int argc, char** argv)
   std::vector<int> pointSelInd;
 
   pcl::PointXYZHSV extreOri, extreSel, extreProj, tripod1, tripod2, tripod3, coeff;
-$
+
   bool status = rclcpp::ok(); // ros::ok() 
   while (status) {
     rclcpp::spin_some(node); //  ros::spinOnce()
@@ -488,7 +490,7 @@ $
       //laserOdometry.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
       laserOdometry.header.stamp = rclcpp::Time(timeLaserCloudLast * 1e9); //
       //laserOdometryTrans.stamp_ = ros::Time().fromSec(timeLaserCloudLast);
-      laserOdometryTrans.stamp = rclcpp::Time(timeLaserCloudLast * 1e9);
+      laserOdometryTrans.header.stamp = rclcpp::Time(timeLaserCloudLast * 1e9);
 
       sweepEnd = true;
       newLaserPoints = true;
@@ -511,7 +513,7 @@ $
       //laserOdometry.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
       laserOdometry.header.stamp = rclcpp::Time(timeLaserCloudExtreCur * 1e9);
       // laserOdometryTrans.stamp_ = ros::Time().fromSec(timeLaserCloudExtreCur);
-      laserOdometryTrans.stamp_ = rclcpp::Time(timeLaserCloudExtreCur * 1e9);
+      laserOdometryTrans.header.stamp = rclcpp::Time(timeLaserCloudExtreCur * 1e9);
 
       float s = (timeLasted - timeLastedRec) / (startTimeCur - startTimeLast);
       for (int i = 0; i < 6; i++) {
@@ -1007,7 +1009,8 @@ $
         // laserCloudLast2.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
         laserCloudLast2.header.stamp = rclcpp::Time(timeLaserCloudLast);
         laserCloudLast2.header.frame_id = "camera";
-        pubLaserCloudLast2.publish(laserCloudLast2);
+        // pubLaserCloudLast2.publish(laserCloudLast2);
+        pubLaserCloudLast2->publish(laserCloudLast2);
 
       } else {
         AccumulateRotation(transformSum[0], transformSum[1], transformSum[2], 
@@ -1034,7 +1037,7 @@ $
       // geometry_msgs::Quaternion geoQuat = tf::createQuaternionMsgFromRollPitchYaw(rz, -rx, -ry);
       tf2::Quaternion geoQuaternion;
       geoQuaternion.setRPY(rz, -rx, -ry);
-      geometry_msg::msg::Quaternion geoQuat;
+      geometry_msgs::msg::Quaternion geoQuat;
       tf2::convert(geoQuaternion, geoQuat); //create QuaternionmsgFromRollPitchYaw doesnt exist so we need to manually create and convert
 
 
@@ -1045,8 +1048,8 @@ $
       laserOdometry.pose.pose.position.x = tx;
       laserOdometry.pose.pose.position.y = ty;
       laserOdometry.pose.pose.position.z = tz;
-      pubLaserOdometry.publish(laserOdometry);
- 
+      // pubLaserOdometry.publish(laserOdometry);
+      pubLaserOdometry->publish(laserOdometry);
 
       //laserOdometryTrans.setRotation(tf::Quaternion(-geoQuat.y, -geoQuat.z, geoQuat.x, geoQuat.w)); 
       laserOdometryTrans.transform.rotation.x = -geoQuat.y ;

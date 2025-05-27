@@ -1,27 +1,33 @@
-#include <math.h>
-#include <time.h>
+#include <cmath>
+#include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 //#include <ros/ros.h>
 #include "rclcpp/rclcpp.hpp"
 
 
-#include <nav_msgs/msg/odometry.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/PointCloud2.h>
+// #include <nav_msgs/Odometry.h>
+// #include <sensor_msgs/Imu.h>
+// #include <sensor_msgs/PointCloud2.h>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_msgs/msg/empty.hpp>
 
-#include <tf/transform_datatypes.h> //still usable
 // #include <tf/transform_broadcaster.h>
 //tf2 for ros2
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_ros/transform_broascaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include "tf2_ros/transform_broadcaster.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <opencv/cv.h>
-#include <opencv2/core/core.hpp>
+
+// #include <opencv/cv.h>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include <pcl/ros/conversions.h>
+//#include <pcl/ros/conversions.h>
 // pcl fromROSMsg() has changed, need to include <pcl_conversions/pcl_conversions.h> header
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -144,7 +150,7 @@ void laserOdometryHandler(const nav_msgs::msg::Odometry::SharedPtr laserOdometry
   if (std::fabs(timeOdomBefMapped - timeOdomAftMapped) < 0.005) {
 
     double roll, pitch, yaw;
-    geometry_msgs::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
+    geometry_msgs::msg::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
 
     // tf::Matrix3x3(tf::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
     tf2::Quaternion tfQuat(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w);
@@ -178,8 +184,8 @@ void laserOdometryHandler(const nav_msgs::msg::Odometry::SharedPtr laserOdometry
     laserOdometry2.pose.pose.position.z = transformMapped[5];
     pubLaserOdometry2Pointer->publish(laserOdometry2);
 
-    laserOdometryTrans2.stamp = laserOdometry->header.stamp;
-    //maybe use laserOdometryTrans2->header.stamp = laserOdometry->header.stamp ; 
+    laserOdometryTrans2.header.stamp = laserOdometry->header.stamp;
+    //maybe use laserOdometryTrans2->header.stamp = laserOdometry->header.stamp ; yes
      // laserOdometryTrans2.setOrigin(tf::Vector3(transformMapped[3], transformMapped[4], transformMapped[5]));
     laserOdometryTrans2.transform.translation.x = transformMapped[3];
     laserOdometryTrans2.transform.translation.y = transformMapped[4];
@@ -195,12 +201,13 @@ void laserOdometryHandler(const nav_msgs::msg::Odometry::SharedPtr laserOdometry
 }
 
 //void odomBefMappedHandler(const nav_msgs::Odometry::ConstPtr& odomBefMapped)
-void odomBefMappedHandler(const nav_msgs::Odometry::SharedPtr odomBefMapped)
+void odomBefMappedHandler(const nav_msgs::msg::Odometry::SharedPtr odomBefMapped)
 {
-  timeOdomBefMapped = odomBefMapped->header.stamp.toSec();
+  // timeOdomBefMapped = odomBefMapped->header.stamp.toSec();
+  timeOdomBefMapped = rclcpp::Time(odomBefMapped->header.stamp).seconds();
 
   double roll, pitch, yaw;
-  geometry_msgs::Quaternion geoQuat = odomBefMapped->pose.pose.orientation;
+  geometry_msgs::msg::Quaternion geoQuat = odomBefMapped->pose.pose.orientation;
   //tf::Matrix3x3(tf::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
   tf2::Matrix3x3(tf2::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
 
@@ -216,10 +223,11 @@ void odomBefMappedHandler(const nav_msgs::Odometry::SharedPtr odomBefMapped)
 //void odomAftMappedHandler(const nav_msgs::Odometry::ConstPtr& odomAftMapped)
 void odomAftMappedHandler(const nav_msgs::msg::Odometry::SharedPtr odomAftMapped)
 {
-  timeOdomAftMapped = odomAftMapped->header.stamp.toSec();
+  // timeOdomAftMapped = odomAftMapped->header.stamp.toSec();
+  timeOdomAftMapped = rclcpp::Time(odomAftMapped->header.stamp).seconds();
 
   double roll, pitch, yaw;
-  geometry_msgs::Quaternion geoQuat = odomAftMapped->pose.pose.orientation;
+  geometry_msgs::msg::Quaternion geoQuat = odomAftMapped->pose.pose.orientation;
   //tf::Matrix3x3(tf::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
   tf2::Matrix3x3(tf2::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
 
@@ -241,8 +249,8 @@ int main(int argc, char** argv)
 
   // ros::Subscriber subLaserOdometry = nh.subscribe<nav_msgs::Odometry> 
   //                                    ("/cam_to_init", 5, laserOdometryHandler);
-  auto subLaserOdometry = node->create_subscription<nav::msgs::msg::Odometry>(
-                                        "/cam_to_init", 5, laserOdometryHandler)
+  auto subLaserOdometry = node->create_subscription<nav_msgs::msg::Odometry>
+                                      ("/cam_to_init", 5, laserOdometryHandler);
 
   // ros::Subscriber subOdomBefMapped = nh.subscribe<nav_msgs::Odometry> 
   //                                    ("/bef_mapped_to_init_2", 5, odomBefMappedHandler);                                     
@@ -258,18 +266,19 @@ int main(int argc, char** argv)
   auto pubLaserOdometry2 = node->create_publisher<nav_msgs::msg::Odometry>
                                       ("/cam_to_init_2", 5);
 
-  pubLaserOdometry2Pointer = &pubLaserOdometry2;
+  //pubLaserOdometry2Pointer = &pubLaserOdometry2;
+  pubLaserOdometry2Pointer = pubLaserOdometry2;
   laserOdometry2.header.frame_id = "camera_init_2";
   laserOdometry2.child_frame_id = "camera";
 
   // tf::TransformBroadcaster tfBroadcaster2;
-  tf2_ros::TransformBroascaster tfBroadcaster2;
-  tfBroadcaster2Pointer = &tfBroadcaster2;
-  laserOdometryTrans2.frame_id_ = "camera_init_2";
-  laserOdometryTrans2.child_frame_id_ = "camera";
+  // tfBroadcaster2Pointer = &tfBroadcaster2;
+  tfBroadcaster2Pointer = std::make_shared<tf2_ros::TransformBroadcaster>(node);
+  laserOdometryTrans2.header.frame_id = "camera_init_2";
+  laserOdometryTrans2.child_frame_id = "camera";
 
   // ros::spin();
-  rclcpp::spin();
+  rclcpp::spin(node);
 
   return 0;
 }
