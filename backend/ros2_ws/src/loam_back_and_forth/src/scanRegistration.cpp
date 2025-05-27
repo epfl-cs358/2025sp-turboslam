@@ -710,7 +710,7 @@ int main(int argc, char** argv)
   // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
   //                          ("/imu/daata", 5, imuHandler);
   auto subImu = node->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu", 5, imuHandler);
+    "/imu/data", 5, imuHandler);
 
   // // ros::Subscriber subSweep = nh.subscribe<std_msgs::Empty>
   // //                            ("/new_sweep", 5, sweepHandler);
