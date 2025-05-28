@@ -1,5 +1,12 @@
 # CS-358 - Making Intelligent Things 2025 Spring
+
+
+
+
+
 ## Project: TurboSLAM - Fast Autonomous Car using Simultaneous Localization and Mapping
+
+
 
 ## Contributors
 - Vincent Palma
@@ -12,8 +19,12 @@
 
 [Project Proposal](https://www.overleaf.com/read/mtyzjbnkwfxt#540f41)
 
+
+
 ## Project Overview
 This project aims to develop an autonomous system for Simultaneous Localization and Mapping (SLAM) using a 2D LiDAR sensor mounted on a servo motor. The system is designed to map an environment and navigate to given coordinates while avoiding obstacles. The project is based on modifying a **Tamiya Blitzer Beetle** RC car, replacing its original control system with an ESP32 microcontroller.
+
+
 
 ## Table of Contents
 - [Description](#description)
@@ -21,9 +32,11 @@ This project aims to develop an autonomous system for Simultaneous Localization 
 - [Software](#software)
 - [Mechanical Build](#mechanical-build)
 - [Challenges & Solutions](#challenges--solutions)
-- [Component List](#component-list)
+- [Bill of Materials](#bill-of-materials)
 - [Milestones & Organization](#milestones--organization)
 - [Evaluation Metrics](#evaluation-metrics)
+
+
 
 ## Description
 The system consists of two main phases:
@@ -32,7 +45,10 @@ The system consists of two main phases:
 
 The **ESP32** microcontroller handles remote communication and data processing, making the project a cost-effective solution for indoor and outdoor navigation applications.
 
+
+
 ## User Stories
+
 ### 1. Assisting Visually Impaired Users in Indoor Navigation
 **As a** visually impaired person,  
 **I want** a robot that maps my surroundings and detects obstacles,  
@@ -58,21 +74,32 @@ The **ESP32** microcontroller handles remote communication and data processing, 
 **I want** a robotic system that maps collapsed buildings,  
 **So that** I can locate survivors safely.
 
+
+
 ## Software
 - SLAM Algorithm Implementation
 - Real-time WiFi Communication via ESP32
 - Path Planning & Obstacle Avoidance
 - Data Processing & Visualization
 
-## Mechanical Build
-The original car chassis was unsuitable for mounting sensors, so we built a three-layer structure:
-1. **Base Layer:** Chassis
-2. **Middle Layer:** Microcontroller & Electronics Mount
-3. **Top Layer:** LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
 
-// Add images
+
+## Mechanical Build
+The original car chassis was unsuitable for mounting sensors, so we built a three-layer structure. Some of the components are outdated, but the idea is the same. See the [Component List](#component-list).
+
+### 1. **Base Layer:** Chassis
+![first-layer](assets/images/first-layer-chassis_old.jpeg)
+
+### 2. **Middle Layer:** Microcontroller & Electronics Mount
+![second-layer](assets/images/second-layer-mc-support_old.jpeg)
+
+### 3. **Top Layer:** LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
+![third-layer](assets/images/third-layer-top.jpeg)
+
+
 
 ## Challenges & Solutions
+
 ### 1. **Building a Custom Chassis**
 **Issue:** The original car body was impractical for mounting components.
 **Solution:** We modified a **Tamiya Blitzer Beetle**, which offers an accessible and stable platform.
@@ -89,21 +116,55 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 **Issue:** The system lacked a remote control and radar detector.
 **Solution:** We used an **ESP32 microcontroller** for **WiFi-based remote communication**.
 
+
+
 ## Component List
+| Component | Info |
+|-----------|------|
+| Tamiya Blitzer Beetle | [Manual](https://www.tamiyausa.com/media/files/58502ml-829-5367.pdf) |
+| RPLIDAR C1 | [Datasheet](https://d229kd5ey79jzj.cloudfront.net/3157/SLAMTEC_rplidar_datasheet_C1_v1.0_en.pdf), [SDK](https://github.com/Slamtec/rplidar_sdk), [Wiki](https://www.waveshare.com/wiki/RPLIDAR_C1) |
+| 7.2V Battery | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
+| BN086 IMU | [Product Page](https://www.bastelgarage.ch/bno055-capteur-intelligent-a-9-axes?search=9dof), [Datasheet](https://cdn-shop.adafruit.com/datasheets/BST_BNO055_DS000_12.pdf)|
+| DMS15 Servo (x2) | [Wiki](https://wiki.dfrobot.com/DSS-M15S_270%C2%B0_15KG_DF_Metal_Servo_with_Analog_Feedback_SKU__SER0044) |
+| ESP32-S3 Microcontroller (x2) | [Datasheet](https://cdn-shop.adafruit.com/product-files/5477/esp32-s3_datasheet_en.pdf) |
+| AS5600 Encoder | [Datasheet](https://files.seeedstudio.com/wiki/Grove-12-bit-Magnetic-Rotary-Position-Sensor-AS5600/res/Magnetic%20Rotary%20Position%20Sensor%20AS5600%20Datasheet.pdf) |
+| HC-SR04 Ultrasonic sensor | [Datasheet](https://handsontec.com/dataspecs/sensor/SR-04-Ultrasonic.pdf) |
+| NEO-6M GPS | [Datasheet](https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf) |
+| LM2596 Buck converter |  |
+
+
+
+## How to assemble
+
+### 1. Build the car
+Since we ordered the car, we don't have to make all its components by ourselves, but we rather simply put everything together. To do this we follow the instructions from the [Tamiya Blitzer Beetle manual](https://www.tamiyausa.com/media/files/58502ml-829-5367.pdf). The goal here is to have the minimal mechanical build, so that it can at least drive. Therefore, we should skip the carcass section and we will probably never need it, as it will be more of a problem than anything. The carcass doesn't have a flat surface for the lidar mount. Instead, we are going to use the layer platform, where most of the components will be mounted.
+
+From now on, the main part will be to attach the mounts for different sensors and actuators. All the pieces to 3d-print are available in the design/3d_files folder.
+
+### 2. Layer Platform
+This is the basis for most of our components, including the lidar mount
+
+
+
+## Bill of Materials
 | Category | Quantity | Cost (CHF) | Info |
-|------|----------|------------|------------|
+|----------|----------|------------|------|
 | Tamiya Blitzer Beetle | 1 | 129 | [Manual](https://www.tamiyausa.com/media/files/58502ml-829-5367.pdf) |
 | RPLIDAR C1 | 1 | 79.90 | [Datasheet](https://d229kd5ey79jzj.cloudfront.net/3157/SLAMTEC_rplidar_datasheet_C1_v1.0_en.pdf), [SDK](https://github.com/Slamtec/rplidar_sdk), [Wiki](https://www.waveshare.com/wiki/RPLIDAR_C1) |
 | 7.2V Battery | 1 | 23.90 (+ 5.0) | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
 | BN055 9DoF IMU | 1 | 19.90 | [Product Page](https://www.bastelgarage.ch/bno055-capteur-intelligent-a-9-axes?search=9dof), [Datasheet](https://cdn-shop.adafruit.com/datasheets/BST_BNO055_DS000_12.pdf)|
 | DMS15 Servo | 2 | 5.0 | [Wiki](https://wiki.dfrobot.com/DSS-M15S_270%C2%B0_15KG_DF_Metal_Servo_with_Analog_Feedback_SKU__SER0044) |
-| Wemos D1-R32 | 1 | 4.0 |  |
+| Wemos D1-R32 Microcontroller | 1 | 4.0 |  |
 | AS5600 Encoder | 1 | 3.90 | [Datasheet](https://files.seeedstudio.com/wiki/Grove-12-bit-Magnetic-Rotary-Position-Sensor-AS5600/res/Magnetic%20Rotary%20Position%20Sensor%20AS5600%20Datasheet.pdf) |
-| HC-SR04 Ultrasonic Sensor | 1 | 2.0 | [Datasheet](https://handsontec.com/dataspecs/sensor/SR-04-Ultrasonic.pdf) |
-| GPS NEO-6M | 1 | 13.50 | [Datasheet](https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf) |
+| HC-SR04 Ultrasonic sensor | 1 | 2.0 | [Datasheet](https://handsontec.com/dataspecs/sensor/SR-04-Ultrasonic.pdf) |
+| NEO-6M GPS | 1 | 13.50 | [Datasheet](https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf) |
+
+Note that this is not our final component list, but rather what we ordered at the beginning of the project. You can find the final list in the [Component List](#component-list).
+
 
 
 ## Evaluation Metrics
+
 ### 1. **Navigation Precision & Path Efficiency**
 - **Metric:** Deviation from planned path (cm/m)
 - **Measurement:** Compare actual vs. planned path using positional tracking
@@ -115,6 +176,8 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 ### 3. **Battery Life & Power Efficiency**
 - **Metric:** Continuous runtime before recharge
 - **Measurement:** Track time in mapping and navigation modes
+
+
 
 ## Related Projects
 - [Laser Scan to Point Cloud](https://github.com/carlosmccosta/laserscan_to_pointcloud?tab=readme-ov-file)
