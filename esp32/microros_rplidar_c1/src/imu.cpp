@@ -65,10 +65,9 @@ void ImuSensor::readAndUpdate() {
   }
 
   // Angular velocity (rad/s)
-  if (sensorValue.sensorId == SH2_GYROSCOPE_UNCALIBRATED) {
+  if (sensorValue.sensorId == SH2_GYROSCOPE_CALIBRATED) {
     imu_msg.angular_velocity.x = sensorValue.un.gyroscopeUncal.x;
     imu_msg.angular_velocity.y = sensorValue.un.gyroscopeUncal.y;
     imu_msg.angular_velocity.z = sensorValue.un.gyroscopeUncal.z;
   }
 }
-

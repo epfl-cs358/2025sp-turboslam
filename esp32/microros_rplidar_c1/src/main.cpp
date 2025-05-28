@@ -26,14 +26,14 @@
 #include "NEO6M.h" 
 
 #define TEST_IMU             1
-#define TEST_ULTRASONIC      1
+#define TEST_ULTRASONIC      0
 #define TEST_ENCODER         0
-#define TEST_SERVO_DIR       1
+#define TEST_SERVO_DIR       0
 #define TEST_SERVO_LID       0
 #define TEST_SERVO_ANGLE_PUB 0
 #define TEST_GPS             0
 #define TEST_LIDAR           0
-#define TEST_MOTOR           1
+#define TEST_MOTOR           0
 
 #define ESC_PIN 15
 
@@ -180,7 +180,7 @@ rcl_ret_t init_ros() {
             &imu_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            "/imu"
+            "/imu/data"
         );
         if (RCL_RET_OK != ret){
             printf("imu publisher init error=%d\r\n", ret);
@@ -242,7 +242,7 @@ rcl_ret_t init_ros() {
         }
     #endif
 
-    // Servo_lid puvlisher to get the angle
+    // Servo_lid publisher to get the angle
     #if TEST_SERVO_ANGLE_PUB
         ret = rclc_publisher_init_default(
             &servo_angle_publisher,
@@ -459,7 +459,7 @@ void setup() {
     #endif
 
     #if TEST_SERVO_ANGLE_PUB
-        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL, 4, NULL, 1);
+        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL, 6, NULL, 1);
         if (servoTaskCreated != pdPASS) {
         Serial.println("Failed to create Servo Publisher Task");
         esp_restart();
@@ -490,7 +490,6 @@ void setup() {
             esp_restart();
         }
     #endif
-
 
     BaseType_t executorTaskCreated = xTaskCreatePinnedToCore(executorTask, "Executor Task", 12288, NULL, 6, NULL, 1); // Higher priority
     if (executorTaskCreated != pdPASS) {
@@ -570,7 +569,7 @@ void servoLidTask(void *parameter) {
     TickType_t lastWake = xTaskGetTickCount();
     while (true) {
         // compute next angle
-        servo_lid.tiltLidar(60, 120, 8000);
+        servo_lid.tiltLidar(60, 120, 3000);
         int angle = servo_lid.getAngle();
         xQueueOverwrite(servoAngleQ, &angle);
         vTaskDelayUntil(&lastWake, period);
