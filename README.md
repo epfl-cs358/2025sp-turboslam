@@ -140,14 +140,14 @@ We decided to use **two microcontrollers** for efficiency.
 
 ### STEP 5/8: Encoder Mount
 <div>
-<img src="assets/images/mount/encoder-mount_cad.png" height="300" style="margin-right: 20px;" />
+<img src="assets/images/mount/encoder-mount_cad.PNG" height="300" style="margin-right: 20px;" />
 <img src="assets/images/mount/encoder-mount.jpeg" height="300" />
 </div>
 
 ### STEP 6/8: LiDAR Mount
 As we explained earlier, the LiDAR is going to be tilted for the 3D scan. This mount will make it easy to do. It consists of two walls and a tilting platform in between:
 
-<img src="assets/images/mount/lidar-mount_cad.png" height="400" /> <br>
+<img src="assets/images/mount/lidar-mount_cad.PNG" height="400" /> <br>
 
 On the left wall, the servo motor will move the platform. For the right wall, we'll need some additional pieces from the mechanical workshop to provide more stability:
 - **M6 Ball bearing** (6 x 22 x 7mm)
