@@ -707,10 +707,15 @@ int main(int argc, char** argv)
   auto subLaserCloud = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "/point_cloud", 2, laserCloudHandler);
 
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
   //                          ("/imu/daata", 5, imuHandler);
+  // auto subImu = node->create_subscription<sensor_msgs::msg::Imu>(
+  //   "/imu/data", 5, imuHandler);
+  // WE IGNORE IMU SINCE IT DOESN'T WORK, COMMENT THE NEXT LINE AND UNCOMMENT THE PREVIOUS ONE IF YOU WANT TO USE IT ANYWAY
   auto subImu = node->create_subscription<sensor_msgs::msg::Imu>(
-    "/imu/data", 5, imuHandler);
+    "/nothing_is_published_to_this_topic", 5, imuHandler);
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   // // ros::Subscriber subSweep = nh.subscribe<std_msgs::Empty>
   // //                            ("/new_sweep", 5, sweepHandler);
