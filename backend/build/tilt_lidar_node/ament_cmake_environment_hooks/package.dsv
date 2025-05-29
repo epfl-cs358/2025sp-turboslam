@@ -1,0 +1,4 @@
+source;share/tilt_lidar_node/local_setup.bash
+source;share/tilt_lidar_node/local_setup.dsv
+source;share/tilt_lidar_node/local_setup.sh
+source;share/tilt_lidar_node/local_setup.zsh

@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-43cb059fcf7bd3e71177.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "tilt_lidar_node",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "tilt_lidar_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-tilt_lidar_node-aae94ff7719e659294c9.json",
+					"name" : "tilt_lidar_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "tilt_lidar_node_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-tilt_lidar_node_uninstall-ec3c318282ee6154376d.json",
+					"name" : "tilt_lidar_node_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-66f6be9677c88b17f759.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/vince/Documents/school/mit/2025sp-turboslam/backend/build/tilt_lidar_node",
+		"source" : "/home/vince/Documents/school/mit/2025sp-turboslam/backend/ros2_ws/src/tilt_lidar_node"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}
