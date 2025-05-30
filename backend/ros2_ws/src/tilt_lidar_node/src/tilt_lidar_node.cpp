@@ -48,12 +48,12 @@ public:
       RCLCPP_INFO(get_logger(),"Injected static mount servo_frame→laser_frame");
     }
 
-    // 2) Inject initial servo tilt = 90° horizontal as world → servo_frame (static)
+    // 2) Inject initial servo tilt = 90° horizontal as base_link → servo_frame (static)
     //    (we treat 90° as “zero tilt” for horizontal)
     {
       current_servo_angle_deg_ = 90;
       geometry_msgs::msg::TransformStamped init_servo;
-      init_servo.header.frame_id    = "world";
+      init_servo.header.frame_id    = "base_link";
       init_servo.child_frame_id     = "servo_frame";
       init_servo.header.stamp       = rclcpp::Time(0);
       init_servo.transform.translation.x = 0.0;
@@ -67,7 +67,7 @@ public:
       init_servo.transform.rotation.z = q0.z();
       init_servo.transform.rotation.w = q0.w();
       tf_buffer_.setTransform(init_servo, "static_servo", true);
-      RCLCPP_INFO(get_logger(),"Injected initial world→servo_frame @0 as horizontal");
+      RCLCPP_INFO(get_logger(),"Injected initial base_link→servo_frame @0 as horizontal");
     }
 
     RCLCPP_INFO(get_logger(),"TiltLaserNode started (servo=90°→horizontal)");
@@ -90,13 +90,13 @@ private:
                 "scan@%.3f dur=%.3f → [%.3f]",
                 t_start.seconds(), dur, t_end.seconds());
 
-    // inject world→servo_frame at t_start and t_end with offset
+    // inject base_link→servo_frame at t_start and t_end with offset
     injectServoAt(t_start);
     injectServoAt(t_end);
 
-    // check that world→laser_frame is now available at t_end
+    // check that base_link→laser_frame is now available at t_end
     if (!tf_buffer_.canTransform(
-          "world", "laser_frame", t_end,
+          "base_link", "laser_frame", t_end,
           rclcpp::Duration::from_seconds(0.0)))
     {
       RCLCPP_WARN(get_logger(),
@@ -109,7 +109,7 @@ private:
     sensor_msgs::msg::PointCloud2 cloud2;
     try {
       projector_.transformLaserScanToPointCloud(
-        "world", *scan_msg, cloud2, tf_buffer_);
+        "base_link", *scan_msg, cloud2, tf_buffer_);
       RCLCPP_INFO(get_logger(),
                   "projected %zu points",
                   cloud2.width * cloud2.height);
@@ -120,7 +120,7 @@ private:
     }
 
     // publish the 3D cloud with the original scan timestamp
-    cloud2.header.frame_id = "world";
+    cloud2.header.frame_id = "base_link";
     cloud2.header.stamp    = scan_msg->header.stamp;
     pointcloud_pub_->publish(cloud2);
     RCLCPP_INFO(get_logger(),
@@ -128,17 +128,17 @@ private:
                 t_start.seconds());
   }
 
-  // helper: inject world→servo_frame at an arbitrary stamp, offset by -90°
+  // helper: inject base_link→servo_frame at an arbitrary stamp, offset by -90°
   void injectServoAt(const rclcpp::Time & stamp) {
     geometry_msgs::msg::TransformStamped tf_msg;
-    tf_msg.header.frame_id    = "world";
+    tf_msg.header.frame_id    = "base_link";
     tf_msg.child_frame_id     = "servo_frame";
     tf_msg.header.stamp       = stamp;
     tf_msg.transform.translation.x = 0.0;
     tf_msg.transform.translation.y = 0.0;
     tf_msg.transform.translation.z = 0.0;
     // subtract 90° so that servo=90°→horizontal=0 tilt
-    double a = - (current_servo_angle_deg_ - 90.0) * M_PI/180.0; // - 90 degrees to have horizontal plane at 0 in world. and use - because of the direction of rotation
+    double a = - (current_servo_angle_deg_ - 90.0) * M_PI/180.0; // - 90 degrees to have horizontal plane at 0 in base_link. and use - because of the direction of rotation
     tf2::Quaternion q;
     q.setRPY(0, a, 0);
     tf_msg.transform.rotation.x = q.x();

@@ -45,4 +45,4 @@ ros2 run rviz2 rviz2
 
 Add a new display (CTRL + N) of type `PointCloud2` and set the topic to `/point_cloud`.
 
-Set Global Options -> Fixed Frame to `world`.
+Set Global Options -> Fixed Frame to `base_link`.
