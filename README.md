@@ -2,6 +2,8 @@
 
 ## Project: TurboSLAM - Fast Autonomous Car using Simultaneous Localization and Mapping
 
+TLDR: If you just want to run the thing, see section [3D SLAM (LiDAR odometry only)](#3d-slam-lidar-odometry-only).
+
 ## Contributors
 
 - Vincent Palma
@@ -201,32 +203,48 @@ We'll list here the main issues encountered during this project, as well as how 
 
 Note: It is probably useful to mention that 3D Lidar mapping is not the most fitting project to realize on microcontrollers due to their lack of processing power. A Raspberry Pi would have probably (and most certainly) been a better and more optimal choice.
 
-## Running the code
-
-Just a quick mention on how to run what can be run.
-
-The main code for this project is located under esp32/microros_rplidar_c1/src. It uses a FreeRTOS implementation and test bits at the top to enable the correct components. This means that in order to upload the correct code for the esp32-s3 that needs the lidar and servo_lid, the TEST_LIDAR, SERVO_LID and TEST_SERVO_ANGLE_PUB should be enable before uploading. The reasoning is the same for the other esp32.
-
-As for moving the car, reading data on the laptop and visualization, these steps are explained in READMEs that are located in the concerned directory (for example see esp32/microros_rplidar_c1/README.md)
-
 ## 3D SLAM (LiDAR odometry only)
 
-Install `mola` (for ROS2 Humble): https://docs.mola-slam.org/latest/#installing
+Here are everything you need to run to get the expected results.
 
-TODO LORIS:
+DISCLAIMER: the following commands are only possible if you have ros2 humble installed on your system (which needs to be Ubuntu 22.04 [^1]).
+
+First upload the code on the correct ESP's. The main final code is a platformio project under `esp32/microros_rplidar_c1`. Now in the file `src/main.cpp` change the test bits at the top before uploading in the following way:
+
+1. For the first ESP (the one not connected to the lidar), enable the IMU, ultrasonic, servo_dir and motor_cmd. Then upload on the first ESP.
+
+2. For the second ESP, enable the servo_lid, lidar and servo_angle_pub, the upload.
+
+NOTE: you also need to create a `credentials.h` file for that and be connected on same WiFI with the laptop, please refer to `esp32/microros_rplidar_c1/README.md`.
+
+After that in a terminal run:
+
+```
 docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888 -v6
+```
 
-teleop . py
-
-comment upload files
-
-NOTE: in the end we use only the LiDAR and servo angle for doing 3D LiDAR odometry, no other sensors are required.
-NOTE: the base frame is "base_link" and not "world".
-IMPORTANT: for the next two steps you need to be in `backend/ros2_ws` and have run
+This start the communication between the laptop and both of the esp32's. To check that it works as expected run (in an other terminal):
 
 ```
-colcon build --packages-select tilt_lidar_node loam_back_and_forth
+ros2 topic list
 ```
+
+and after (as an example):
+
+```
+ros2 topic echo /scan
+```
+
+You should see some data arriving.
+
+Afet that, go into `backend/ros2_ws/src/teleop_keyboard` and run the script to be able to control the car using WASD[^2]:
+
+```
+python Teleop.py
+```
+
+IMPORTANT: for the next two steps you need to be in `backend/ros2_ws` and have run `colcon build --packages-select tilt_lidar_node loam_back_and_forth` already.
+IMPORTANT2: the base frame is "base_link" and not "world" for Rviz, if for some reason you don't see any output in Rviz but `/scan` outputs correctly, check that the parameter `Global Options -> Fixed Frame` is set to `base_link`.
 
 In one terminal (this package projects the 2d LaserScans from topic `/scan` according to the current servo angle from topic `/lidar_servo_angle` to topic `/point_cloud`):
 
