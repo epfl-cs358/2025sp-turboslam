@@ -20,10 +20,8 @@
 [Project Proposal](https://www.overleaf.com/read/mtyzjbnkwfxt#540f41)
 
 
-
 ## Project Overview
 This project aims to develop an autonomous system for Simultaneous Localization and Mapping (SLAM) using a 2D LiDAR sensor mounted on a servo motor. The system is designed to map an environment and navigate to given coordinates while avoiding obstacles. The project is based on modifying a **Tamiya Blitzer Beetle** RC car, replacing its original control system with an ESP32 microcontroller.
-
 
 
 ## Table of Contents
@@ -66,7 +64,6 @@ The **ESP32** microcontroller handles remote communication and data processing, 
 | 7.2V Battery | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
 
 
-
 ## First Idea of the Mechanical Build
 The original car chassis was unsuitable for mounting sensors, so we built a three-layer structure:
 
@@ -78,7 +75,6 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 
 ### Top Layer: LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
 <img src="assets/images/third-layer-top.jpeg" height="400" />
-
 
 
 ## How to Assemble
@@ -169,6 +165,20 @@ Note that there are other topics for the motor and the servo responsible for the
 
 It is also essential to mention that in order to achieve these frequencies, 2 ESP32-S3s with 8 MB of additional PSRAM were needed, as well as a complete and optimized implementation using FreeRTOS utilizing both cores of the microcontroller. 
 
+## ROS2 Tips and Tricks
+
+If you want to use ROS for your project, we highly recommend a raspberry PI instead of microcontrollers (and if you choose microcontrollers choose something more "beefy" than a Wemos d1 r32). If you still want to go the path we did, micro-ROS is what you need. Settle on the last ROS2 version compatible with micro-ROS (Humble at the time of writing this), and read the [docs](https://docs.ros.org/en/humble/index.html) to get familiar.
+
+If you don't have the specific OS required by the ROS2 version (ubuntu 22.04 in the case of Humble), Docker is a perfectly fine version, AS LONG AS YOU ARE ON LINUX (the --net=host option is essential for topics published inside the container to be available on the host and vice-versa).
+
+To get UDP communication working with the esp32, look at our code at `esp32/microros_rplidar_c1/main.cpp` (note that you need to run microros-agent on the laptop, details are written in a README somewhere). It is also good practice to use FreeRTOS when you have more than one component (see the same file) and will simplify your life a lot.
+
+Mind that SUBSCRIBING (publishing works fine for any data type) to messages of data types more complex than simple `Int32` or `Float32` (for example `Joy` in our case..) is likely to not work with micro-ROS.
+
+One really practical thing about ROS are bag files, they allow to record the whole system running and then play it back later at home for debugging.
+
+Read the different READMEs scattered around the repo's subfolders, there is a lot of info there that I probably forgot to write here.
+
 ## Issues
 We'll list here the main issues encountered during this project, as well as how we tried to fix them. 
 
@@ -189,43 +199,6 @@ Note: It is probably useful to mention that 3D Lidar mapping is not the most fit
 - Real-time WiFi Communication via ESP32
 - Path Planning & Obstacle Avoidance
 - Data Processing & Visualization
-
-
-
-## Expected Challenges & Solutions
-
-### 1. **Building a Custom Chassis**
-**Issue:** The original car body was impractical for mounting components.
-**Solution:** We modified a **Tamiya Blitzer Beetle**, which offers an accessible and stable platform.
-
-### 2. **Simulating a 3D LiDAR with a 2D Sensor**
-**Issue:** 3D LiDARs are expensive and out of budget.
-**Solution:** We mounted a **2D LiDAR on a servo motor**, allowing it to scan at different angles to simulate a 3D scan.
-
-### 3. **Detecting Unexpected Obstacles**
-**Issue:** Mapping alone does not detect obstacles appearing after the initial scan.
-**Solution:** We implemented a **front-mounted laser sensor** for real-time obstacle detection.
-
-### 4. **Remote Communication & Control**
-**Issue:** The system lacked a remote control and radar detector.
-**Solution:** We used an **ESP32 microcontroller** for **WiFi-based remote communication**.
-
-
-
-## Evaluation Metrics
-
-### 1. **Navigation Precision & Path Efficiency**
-- **Metric:** Deviation from planned path (cm/m)
-- **Measurement:** Compare actual vs. planned path using positional tracking
-
-### 2. **WiFi Communication Latency**
-- **Metric:** Transmission delay (ms)
-- **Measurement:** Timestamp logs for command transmission and execution
-
-### 3. **Battery Life & Power Efficiency**
-- **Metric:** Continuous runtime before recharge
-- **Measurement:** Track time in mapping and navigation modes
-
 
 
 ## Bill of Materials
