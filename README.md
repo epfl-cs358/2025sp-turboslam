@@ -203,7 +203,10 @@ As for moving the car, reading data on the laptop and visualization, these steps
 
 Install `mola`: https://docs.mola-slam.org/latest/#installing
 
-SLAM on raw inputs (without sweeps)
+
+## Debug
+
+SLAM on raw inputs (without sweeps, NOT WORKING)
 
 ```
 ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
@@ -212,16 +215,37 @@ ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
    publish_localization_following_rep105:=False
 ```
 
+## With full sweeps
+
+In one terminal:
+
+```
+ros2 launch tilt_lidar_node view_tilt_lidar_launch.py
+```
+
+Then, in another terminal:
+
+```
+
+in another terminal:
+
+```
+ros2 launch loam_back_and_forth loam_back_and_forth_launch.py
+```
+
+and in last terminal:
+
 SLAM sweeped pointcloud (need to run loam_back_and_forth also)
 
 ```
 ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
-   lidar_topic_name:=sweeped_point_cloud \
+   lidar_topic_name:=full_scan \
    ignore_lidar_pose_from_tf:=True \
    publish_localization_following_rep105:=False
 ```
 
 ## Bill of Materials
+
 | Category | Quantity | Cost (CHF) | Info |
 |----------|----------|------------|------|
 | Tamiya Blitzer Beetle | 1 | 129 | [Manual](https://www.tamiyausa.com/media/files/58502ml-829-5367.pdf) |
@@ -235,8 +259,6 @@ ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
 | 7.2V Battery | 1 | 23.90 (+ 5.0) | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
 
 Note that this is not our final component list, but rather what we ordered at the beginning of the project. You can find the final list in the [Component List](#component-list).
-
-
 
 ## Related Projects
 - [Laser Scan to Point Cloud](https://github.com/carlosmccosta/laserscan_to_pointcloud?tab=readme-ov-file)
