@@ -20,10 +20,8 @@
 [Project Proposal](https://www.overleaf.com/read/mtyzjbnkwfxt#540f41)
 
 
-
 ## Project Overview
 This project aims to develop an autonomous system for Simultaneous Localization and Mapping (SLAM) using a 2D LiDAR sensor mounted on a servo motor. The system is designed to map an environment and navigate to given coordinates while avoiding obstacles. The project is based on modifying a **Tamiya Blitzer Beetle** RC car, replacing its original control system with an ESP32 microcontroller.
-
 
 
 ## Table of Contents
@@ -49,37 +47,6 @@ The system consists of two main phases:
 
 The **ESP32** microcontroller handles remote communication and data processing, making the project a cost-effective solution for indoor and outdoor navigation applications.
 
-
-
-## User Stories
-
-### 1. Assisting Visually Impaired Users in Indoor Navigation
-**As a** visually impaired person,  
-**I want** a robot that maps my surroundings and detects obstacles,  
-**So that** I can navigate safely without colliding or falling.
-
-### 2. Helping People with Mobility Issues
-**As a** wheelchair user,  
-**I want** a system that detects floor hazards like stairs,  
-**So that** I can navigate safely.
-
-### 3. Obstacle Avoidance for Robotic Vacuums
-**As a** homeowner,  
-**I want** my robotic vacuum to avoid furniture and stairs,  
-**So that** it can clean efficiently without getting stuck.
-
-### 4. Indoor Navigation for Large Buildings
-**As a** visitor in a shopping mall,  
-**I want** a 3D-mapping system to guide me,  
-**So that** I can reach my destination without external help.
-
-### 5. Search and Rescue in Disaster Areas
-**As a** rescue worker,  
-**I want** a robotic system that maps collapsed buildings,  
-**So that** I can locate survivors safely.
-
-
-
 ## Component List
 | Component | Info |
 |-----------|------|
@@ -97,7 +64,6 @@ The **ESP32** microcontroller handles remote communication and data processing, 
 | 7.2V Battery | [Product Page](https://www.galaxus.ch/fr/s5/product/gens-ace-modelisme-dune-batterie-720-v-5000-mah-batterie-rc-9459930) |
 
 
-
 ## First Idea of the Mechanical Build
 The original car chassis was unsuitable for mounting sensors, so we built a three-layer structure:
 
@@ -109,7 +75,6 @@ The original car chassis was unsuitable for mounting sensors, so we built a thre
 
 ### Top Layer: LiDAR Mount (Servo-tilted 2D LiDAR for 3D mapping)
 <img src="assets/images/third-layer-top.jpeg" height="400" />
-
 
 
 ## How to Assemble
@@ -186,50 +151,54 @@ Follow the wiring from this circuit diagram:
 
 Most of our components operate at 5V, while our battery is 7.2V, so we need a buck converter to lower the voltage.
 
+## Communication
+Since the 3D SLAM algorithm is fairly resource intensive, we cannot directly run it on the ESP32-S3. but need first to send the data of the sensors to the 
 
+laptop, where the computations will happen. Luckily, this is a fairly straightforward process with ROS2 (note that the ESP32 and the laptop have to be connected to theme Wi-Fi in order for this to work). A topic was created for each sensor, and on these topics data was published using rclc_publish. The main limitation here was the achievable publishing rate for the different sensors. Since the rclc_publish method is "fairly heavy" (I mean by that that it is not as optimal as a complete implementation by hand and correctly optimized), the frequency we managed to achieve is definitely sub-optimal, though still usable. Here is a list of all the sensors and achieved frequency :
+
+- IMU: 20 Hz with ultrasonic running (30 Hz without ultrasonic)
+- LIDAR: 8-10 Hz
+- Lidar servo: 20 Hz (this is not a sensor, though we still needed that live angle for the lidar to transform the 2D points of the lidar into 3D)
+- Ultrasonic: 20 Hz (with IMU)
+
+Note that there are other topics for the motor and the servo responsible for the direction, though these ones were not as essential to optimize for the algorithm to work. 
+
+It is also essential to mention that in order to achieve these frequencies, 2 ESP32-S3s with 8 MB of additional PSRAM were needed, as well as a complete and optimized implementation using FreeRTOS utilizing both cores of the microcontroller. 
+
+## ROS2 Tips and Tricks
+
+If you want to use ROS for your project, we highly recommend a raspberry PI instead of microcontrollers (and if you choose microcontrollers choose something more "beefy" than a Wemos d1 r32). If you still want to go the path we did, micro-ROS is what you need. Settle on the last ROS2 version compatible with micro-ROS (Humble at the time of writing this), and read the [docs](https://docs.ros.org/en/humble/index.html) to get familiar.
+
+If you don't have the specific OS required by the ROS2 version (ubuntu 22.04 in the case of Humble), Docker is a perfectly fine version, AS LONG AS YOU ARE ON LINUX (the --net=host option is essential for topics published inside the container to be available on the host and vice-versa).
+
+To get UDP communication working with the esp32, look at our code at `esp32/microros_rplidar_c1/main.cpp` (note that you need to run microros-agent on the laptop, details are written in a README somewhere). It is also good practice to use FreeRTOS when you have more than one component (see the same file) and will simplify your life a lot.
+
+Mind that SUBSCRIBING (publishing works fine for any data type) to messages of data types more complex than simple `Int32` or `Float32` (for example `Joy` in our case..) is likely to not work with micro-ROS.
+
+One really practical thing about ROS are bag files, they allow to record the whole system running and then play it back later at home for debugging.
+
+Read the different READMEs scattered around the repo's subfolders, there is a lot of info there that I probably forgot to write here.
+
+## Issues
+We'll list here the main issues encountered during this project, as well as how we tried to fix them. 
+
+1. The first microcontroller we chose, the Wemos D1 R32, was not a fitting choice due to its lack of processing power and restraint RAM (without any possibility to add more on top). Instead, we bought 2 ESP32-S3s with 16 MB of flash, 8 MB of PSRAM, and much faster processing power.
+
+2. The first algorithm we wanted to use (LIO-SAM) required the IMU to publish at 200 Hz (whereas the one we had at the time could only output 100 Hz at best). We decided to buy a new one, the BNO086, which can output at 400 Hz (note that this was actually completely useless in the end). 
+
+3. Even while using both ESP32-S3s (at the same time), the best rate we could achieve for the IMU was 30 Hz. There is actually not much we could do here, since this is mainly limited by the rclc_publish method of ROS2 (see the communication section).
+
+4. I2C communication with the IMU is unstable; it works sometimes but not right after. This issue, which persisted throughout the whole project, also prevented us from calibrating the IMU correctly. 
+
+5. Having a complete ROS 2 Humble setup on everyone's machine was also quite the challenge. In the team everyone used a different OS, and ROS2 Humble needed specifically Ubuntu 22.04 in order to work. Docker was needed to run an instance of ROS 2 Humble on other Linux distros (the Docker command does not work on Windows without WSL).
+
+Note: It is probably useful to mention that 3D Lidar mapping is not the most fitting project to realize on microcontrollers due to their lack of processing power. A Raspberry Pi would have probably (and most certainly) been a better and more optimal choice.
 
 ## Software
 - SLAM Algorithm Implementation
 - Real-time WiFi Communication via ESP32
 - Path Planning & Obstacle Avoidance
 - Data Processing & Visualization
-
-
-
-## Expected Challenges & Solutions
-
-### 1. **Building a Custom Chassis**
-**Issue:** The original car body was impractical for mounting components.
-**Solution:** We modified a **Tamiya Blitzer Beetle**, which offers an accessible and stable platform.
-
-### 2. **Simulating a 3D LiDAR with a 2D Sensor**
-**Issue:** 3D LiDARs are expensive and out of budget.
-**Solution:** We mounted a **2D LiDAR on a servo motor**, allowing it to scan at different angles to simulate a 3D scan.
-
-### 3. **Detecting Unexpected Obstacles**
-**Issue:** Mapping alone does not detect obstacles appearing after the initial scan.
-**Solution:** We implemented a **front-mounted laser sensor** for real-time obstacle detection.
-
-### 4. **Remote Communication & Control**
-**Issue:** The system lacked a remote control and radar detector.
-**Solution:** We used an **ESP32 microcontroller** for **WiFi-based remote communication**.
-
-
-
-## Evaluation Metrics
-
-### 1. **Navigation Precision & Path Efficiency**
-- **Metric:** Deviation from planned path (cm/m)
-- **Measurement:** Compare actual vs. planned path using positional tracking
-
-### 2. **WiFi Communication Latency**
-- **Metric:** Transmission delay (ms)
-- **Measurement:** Timestamp logs for command transmission and execution
-
-### 3. **Battery Life & Power Efficiency**
-- **Metric:** Continuous runtime before recharge
-- **Measurement:** Track time in mapping and navigation modes
-
 
 
 ## Bill of Materials
