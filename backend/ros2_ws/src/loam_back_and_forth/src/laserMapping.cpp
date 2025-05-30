@@ -202,8 +202,8 @@ void pointAssociateToMap(pcl::PointXYZHSV *pi, pcl::PointXYZHSV *po)
 //void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLast2)
 void laserCloudLastHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudLast2)
 {
-  //timeLaserCloudLast = laserCloudLast2->header.stamp.toSec();
-  timeLaserCloudLast = rclcpp::Time(laserCloudLast2->header.stamp).seconds();
+  timeLaserCloudLast = laserCloudLast2->header.stamp.sec;
+ //timeLaserCloudLast = rclcpp::Time(laserCloudLast2->header.stamp).seconds();
 
   laserCloudLast->clear();
   pcl::fromROSMsg(*laserCloudLast2, *laserCloudLast);
@@ -213,8 +213,8 @@ void laserCloudLastHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserC
 
 void laserOdometryHandler(const nav_msgs::msg::Odometry::SharedPtr laserOdometry)
 {
-  //timeLaserOdometry = laserOdometry->header.stamp.toSec();
-  timeLaserOdometry = rclcpp::Time(laserOdometry->header.stamp).seconds();
+  timeLaserOdometry = laserOdometry->header.stamp.sec;
+  //timeLaserOdometry = rclcpp::Time(laserOdometry->header.stamp).seconds();
 
   double roll, pitch, yaw;
   geometry_msgs::msg::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
@@ -761,19 +761,19 @@ int main(int argc, char** argv)
       sensor_msgs::msg::PointCloud2 laserCloudSurround2;
       pcl::toROSMsg(*laserCloudSurround, laserCloudSurround2);
       //laserCloudSurround2.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
-      laserCloudSurround2.header.stamp = rclcpp::Time(timeLaserCloudLast * 1e9);
+      laserCloudSurround2.header.stamp = rclcpp::Time(timeLaserCloudLast);
       laserCloudSurround2.header.frame_id = "camera_init_2";
       // pubLaserCloudSurround.publish(laserCloudSurround2);
       pubLaserCloudSurround->publish(laserCloudSurround2);
 
       //geometry_msgs::Quaternion geoQuat = tf::createQuaternionMsgFromRollPitchYaw(transformBefMapped[2], -transformBefMapped[0], -transformBefMapped[1]);
       tf2::Quaternion geoQuatBef;
-      geoQuatBef.setRPY(transformAftMapped[2], -transformAftMapped[0], -transformAftMapped[1]);
+      geoQuatBef.setRPY(transformBefMapped[2], -transformBefMapped[0], -transformBefMapped[1]);
       geometry_msgs::msg::Quaternion geoQuat;
       tf2::convert(geoQuatBef, geoQuat);
 
       // odomBefMapped.header.stamp = ros::Time.fromSec(timeLaserCloudLast);
-      odomBefMapped.header.stamp = rclcpp::Time(timeLaserCloudLast * 1e9);
+      odomBefMapped.header.stamp = rclcpp::Time(timeLaserCloudLast);
       odomBefMapped.pose.pose.orientation.x = -geoQuat.y;
       odomBefMapped.pose.pose.orientation.y = -geoQuat.z;
       odomBefMapped.pose.pose.orientation.z = geoQuat.x;
@@ -790,7 +790,7 @@ int main(int argc, char** argv)
       tf2::convert(geoQuatAft, geoQuat);
 
       // odomAftMapped.header.stamp = ros::Time.fromSec(timeLaserCloudLast);
-      odomAftMapped.header.stamp = rclcpp::Time(timeLaserCloudLast * 1e9);
+      odomAftMapped.header.stamp = rclcpp::Time(timeLaserCloudLast);
       odomAftMapped.pose.pose.orientation.x = -geoQuat.y;
       odomAftMapped.pose.pose.orientation.y = -geoQuat.z;
       odomAftMapped.pose.pose.orientation.z = geoQuat.x;

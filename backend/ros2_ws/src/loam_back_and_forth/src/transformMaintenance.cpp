@@ -203,8 +203,8 @@ void laserOdometryHandler(const nav_msgs::msg::Odometry::SharedPtr laserOdometry
 //void odomBefMappedHandler(const nav_msgs::Odometry::ConstPtr& odomBefMapped)
 void odomBefMappedHandler(const nav_msgs::msg::Odometry::SharedPtr odomBefMapped)
 {
-  // timeOdomBefMapped = odomBefMapped->header.stamp.toSec();
-  timeOdomBefMapped = rclcpp::Time(odomBefMapped->header.stamp).seconds();
+  timeOdomBefMapped = odomBefMapped->header.stamp.sec;
+  //timeOdomBefMapped = rclcpp::Time(odomBefMapped->header.stamp).seconds();
 
   double roll, pitch, yaw;
   geometry_msgs::msg::Quaternion geoQuat = odomBefMapped->pose.pose.orientation;
@@ -223,8 +223,8 @@ void odomBefMappedHandler(const nav_msgs::msg::Odometry::SharedPtr odomBefMapped
 //void odomAftMappedHandler(const nav_msgs::Odometry::ConstPtr& odomAftMapped)
 void odomAftMappedHandler(const nav_msgs::msg::Odometry::SharedPtr odomAftMapped)
 {
-  // timeOdomAftMapped = odomAftMapped->header.stamp.toSec();
-  timeOdomAftMapped = rclcpp::Time(odomAftMapped->header.stamp).seconds();
+  timeOdomAftMapped = odomAftMapped->header.stamp.sec;
+  //timeOdomAftMapped = rclcpp::Time(odomAftMapped->header.stamp).seconds();
 
   double roll, pitch, yaw;
   geometry_msgs::msg::Quaternion geoQuat = odomAftMapped->pose.pose.orientation;
