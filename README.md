@@ -269,11 +269,6 @@ ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
    publish_localization_following_rep105:=False
 ```
 
----
-
-[^1]: It should be doable to run most of the components in Docker containers but Rviz would still need to be run on the host, or use the host's X11 server, to see the GUI.
-[^2]: Note that when turning the car (pressing A or D) a lot of message are transmitted to the car ros node, and thus it makes the LiDAR output stop for a while because of the lack of throughput.
-
 ## Bill of Materials
 
 | Category                     | Quantity | Cost (CHF)    | Info                                                                                                                                                                                               |
@@ -300,3 +295,6 @@ Note that this is not our final component list, but rather what we ordered at th
 ---
 
 **MIT - Spring 2025**
+
+[^1]: It should be doable to run most of the components in Docker containers but Rviz would still need to be run on the host, or use the host's X11 server, to see the GUI.
+[^2]: Note that when turning the car (pressing A or D) a lot of message are transmitted to the car ros node, and thus it makes the LiDAR output stop for a while because of the lack of throughput.
