@@ -149,8 +149,6 @@ Follow the wiring from this circuit diagram:
 
 <img src="assets/images/wiring/circuit-final.png" height="500" />
 
-Most of our components operate at 5V, while our battery is 7.2V, so we need a buck converter to lower the voltage.
-
 ## Communication
 Since the 3D SLAM algorithm is fairly resource intensive, we cannot directly run it on the ESP32-S3. but need first to send the data of the sensors to the 
 
@@ -194,12 +192,12 @@ We'll list here the main issues encountered during this project, as well as how 
 
 Note: It is probably useful to mention that 3D Lidar mapping is not the most fitting project to realize on microcontrollers due to their lack of processing power. A Raspberry Pi would have probably (and most certainly) been a better and more optimal choice.
 
-## Software
-- SLAM Algorithm Implementation
-- Real-time WiFi Communication via ESP32
-- Path Planning & Obstacle Avoidance
-- Data Processing & Visualization
+## Running the code
+Just a quick mention on how to run what can be run. 
 
+The main code for this project is located under esp32/microros_rplidar_c1/src. It uses a FreeRTOS implementation and test bits at the top to enable the correct components. This means that in order to upload the correct code for the esp32-s3 that needs the lidar and servo_lid, the TEST_LIDAR, SERVO_LID and TEST_SERVO_ANGLE_PUB should be enable before uploading. The reasoning is the same for the other esp32. 
+
+As for moving the car, reading data on the laptop and visualization, these steps are explained in READMEs that are located in the concerned directory (for example see esp32/microros_rplidar_c1/README.md)
 
 ## Bill of Materials
 | Category | Quantity | Cost (CHF) | Info |
