@@ -8,6 +8,9 @@
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/lidar_servo_imu_pcl_slow_10hz_5hz_10hz/metadata.yaml
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/subset/subset_0.db3
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/subset/metadata.yaml
+/home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/lidarServo/myMap.simplemap
+/home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/lidarServo/metadata.yaml
+/home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/bag/lidarServo/lidarServo_0.db3
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/ament_index/resource_index/package_run_dependencies/tilt_lidar_node
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/ament_index/resource_index/parent_prefix_path/tilt_lidar_node
 /home/vince/Documents/school/mit/2025sp-turboslam/backend/install/tilt_lidar_node/share/tilt_lidar_node/environment/ament_prefix_path.sh

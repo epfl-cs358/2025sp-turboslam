@@ -217,19 +217,31 @@ ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
 
 ## With full sweeps
 
+TODO LORIS:
+docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888 -v6
+
+teleop . py
+
+comment upload files
+
+IMPORTANT: for the next two steps you need to be in `backend/ros2_ws` and have run
+NOTE: the base frame is "base_link" and not "world" for rviz.
+
+```
+colcon build --packages-select tilt_lidar_node loam_back_and_forth
+```
+
 In one terminal:
 
 ```
+source install/setup.zsh
 ros2 launch tilt_lidar_node view_tilt_lidar_launch.py
 ```
 
 Then, in another terminal:
 
 ```
-
-in another terminal:
-
-```
+source install/setup.zsh
 ros2 launch loam_back_and_forth loam_back_and_forth_launch.py
 ```
 
