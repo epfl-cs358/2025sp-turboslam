@@ -29,7 +29,7 @@
 #define TEST_ULTRASONIC      0
 #define TEST_ENCODER         0
 #define TEST_SERVO_DIR       0
-#define TEST_SERVO_LID       1
+#define TEST_SERVO_LID      1
 #define TEST_SERVO_ANGLE_PUB 1
 #define TEST_GPS             0
 #define TEST_LIDAR           1
@@ -460,7 +460,7 @@ void setup() {
     #endif
 
     #if TEST_SERVO_ANGLE_PUB
-        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL, 4, NULL, 1);
+        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL,6, NULL, 1);
         if (servoTaskCreated != pdPASS) {
         Serial.println("Failed to create Servo Publisher Task");
         esp_restart();
