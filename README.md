@@ -177,7 +177,7 @@ It is also essential to mention that in order to achieve these frequencies, 2 ES
 
 If you want to use ROS for your project, we highly recommend a raspberry PI instead of microcontrollers (and if you choose microcontrollers choose something more "beefy" than a Wemos d1 r32). If you still want to go the path we did, micro-ROS is what you need. Settle on the last ROS2 version compatible with micro-ROS (Humble at the time of writing this), and read the [docs](https://docs.ros.org/en/humble/index.html) to get familiar.
 
-If you don't have the specific OS required by the ROS2 version (ubuntu 22.04 in the case of Humble), Docker is a perfectly fine version, AS LONG AS YOU ARE ON LINUX (the --net=host option is essential for topics published inside the container to be available on the host and vice-versa).
+If you don't have the specific OS required by the ROS2 version (ubuntu 22.04 in the case of Humble), Docker is a perfectly fine option, AS LONG AS YOU ARE ON LINUX (the --net=host option is essential for topics published inside the container to be available on the host and vice-versa).
 
 To get UDP communication working with the esp32, look at our code at `esp32/microros_rplidar_c1/main.cpp` (note that you need to run microros-agent on the laptop, details are written in a README somewhere). It is also good practice to use FreeRTOS when you have more than one component (see the same file) and will simplify your life a lot.
 
@@ -295,3 +295,6 @@ Note that this is not our final component list, but rather what we ordered at th
 ---
 
 **MIT - Spring 2025**
+
+[^1]: It should be doable to run most of the components in Docker containers but Rviz would still need to be run on the host, or use the host's X11 server, to see the GUI.
+[^2]: Note that when turning the car (pressing A or D) a lot of message are transmitted to the car ros node, and thus it makes the LiDAR output stop for a while because of the lack of throughput.
