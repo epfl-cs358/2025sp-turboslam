@@ -1,34 +1,29 @@
 services:
-  ros2-dev:
+  # Main ROS2 system (SLAM, navigation, etc.)
+  ros2-main:
     build: .
     image: ros2-dev:humble
-    container_name: ros2_dev
+    container_name: ros2_main
     volumes:
       - ../:/workspace
     network_mode: "host"
     privileged: true
-    tty: true
-    stdin_open: true
+    command: bash -c "
+      source /opt/ros/humble/setup.bash &&
+      source /microros_ws/install/local_setup.sh &&
+      
+    environment: 
+      - DISPLAY
+      # Start your main ROS2 nodes here
+      
 
-  esp32:
+  # Micro-ROS agent (only if you want it as a service)
+  microros-agent:
     image: ros2-dev:humble
-    container_name: ros2_esp32
-    volumes:
-      - ../:/workspace
-    working_dir: /workspace/esp32
+    container_name: microros_agent
     network_mode: "host"
-    privileged: true
-    devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"
-    tty: true
-    stdin_open: true
-
-  backend:
-    image: ros2-dev:humble
-    container_name: ros2_backend
-    volumes:
-      - ../:/workspace
-    working_dir: /workspace/backend
-    network_mode: "host"
-    tty: true
-    stdin_open: true
+    command: bash -c "
+      source /opt/ros/humble/setup.bash &&
+      source /microros_ws/install/local_setup.sh &&
+      ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888"
+    restart: unless-stopped
