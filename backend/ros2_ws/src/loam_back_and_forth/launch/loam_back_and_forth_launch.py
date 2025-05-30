@@ -16,7 +16,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 pkg_share = get_package_share_directory('loam_back_and_forth')
-rviz_config = os.path.join(pkg_share, 'rviz_cfg', 'loam_back_and_forth.rviz')
+rviz_config = os.path.join(pkg_share, 'rviz_cfg', 'full_scan.rviz')
 
 def generate_launch_description():
     return LaunchDescription([
