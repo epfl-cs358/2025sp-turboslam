@@ -9,7 +9,10 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_share = get_package_share_directory('tilt_lidar_node')
     rviz_config = os.path.join(pkg_share, 'rviz', 'view_tilt_lidar.rviz')
-    bag_path    = os.path.join(pkg_share, 'bag', 'lidar_servo_imu_pcl_slow_10hz_5hz_10hz')
+    # bag_path    = os.path.join(pkg_share, 'bag', 'lidar_servo_imu_pcl_slow_10hz_5hz_10hz')
+    # bag_path    = os.path.join(pkg_share, 'bag', 'subset')
+    # bag_path    = os.path.join(pkg_share, 'bag', 'lidar_servo_pcl_slow_10hz_15hz')
+    bag_path = os.path.join(pkg_share, 'bag', 'lidarServo')
     
     return LaunchDescription([
         ExecuteProcess(

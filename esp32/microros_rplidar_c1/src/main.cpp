@@ -25,17 +25,18 @@
 #include "DMS15.h"
 #include "NEO6M.h" 
 
-#define TEST_IMU             1
-#define TEST_ULTRASONIC      1
+#define TEST_IMU             0
+#define TEST_ULTRASONIC      0
 #define TEST_ENCODER         0
-#define TEST_SERVO_DIR       1
-#define TEST_SERVO_LID       0
-#define TEST_SERVO_ANGLE_PUB 0
+#define TEST_SERVO_DIR       0
+#define TEST_SERVO_LID      1
+#define TEST_SERVO_ANGLE_PUB 1
 #define TEST_GPS             0
-#define TEST_LIDAR           0
-#define TEST_MOTOR           1
-
+#define TEST_LIDAR           1
+#define TEST_MOTOR           0
+ 
 #define ESC_PIN 15
+#define MOTOR_SPEED 0.2
 
 // Micro-ROS variables
 rcl_allocator_t allocator;
@@ -115,7 +116,7 @@ void servo_lid_callback(const void* msgin) {
 
 void motor_callback(const void* msgin) {
     const auto *cmd = static_cast<const std_msgs__msg__Int8*>(msgin);
-    motor.setTargetPercent(float(cmd->data) * 0.2);
+    motor.setTargetPercent(float(cmd->data) * MOTOR_SPEED);
 }
 
 rcl_ret_t init_ros() {
@@ -459,7 +460,7 @@ void setup() {
     #endif
 
     #if TEST_SERVO_ANGLE_PUB
-        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL, 4, NULL, 1);
+        BaseType_t servoTaskCreated = xTaskCreatePinnedToCore(servoPublisherTask, "ServoPub", 2048, NULL,6, NULL, 1);
         if (servoTaskCreated != pdPASS) {
         Serial.println("Failed to create Servo Publisher Task");
         esp_restart();

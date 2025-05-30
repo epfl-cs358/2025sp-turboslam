@@ -199,6 +199,28 @@ The main code for this project is located under esp32/microros_rplidar_c1/src. I
 
 As for moving the car, reading data on the laptop and visualization, these steps are explained in READMEs that are located in the concerned directory (for example see esp32/microros_rplidar_c1/README.md)
 
+## 3D SLAM (LiDAR odometry only)
+
+Install `mola`: https://docs.mola-slam.org/latest/#installing
+
+SLAM on raw inputs (without sweeps)
+
+```
+ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
+   lidar_topic_name:=point_cloud \
+   ignore_lidar_pose_from_tf:=True \
+   publish_localization_following_rep105:=False
+```
+
+SLAM sweeped pointcloud (need to run loam_back_and_forth also)
+
+```
+ros2 launch mola_lidar_odometry ros2-lidar-odometry.launch.py \
+   lidar_topic_name:=sweeped_point_cloud \
+   ignore_lidar_pose_from_tf:=True \
+   publish_localization_following_rep105:=False
+```
+
 ## Bill of Materials
 | Category | Quantity | Cost (CHF) | Info |
 |----------|----------|------------|------|
