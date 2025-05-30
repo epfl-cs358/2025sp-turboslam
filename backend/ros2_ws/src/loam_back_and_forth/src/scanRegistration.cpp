@@ -196,14 +196,14 @@ void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloud
   // std::cout << "[LOAM] Handling laser cloud" << std::endl;
 
   if (!systemInited) {
-    initTime = rclcpp::Time(laserCloudIn2->header.stamp).seconds();
+    initTime = laserCloudIn2->header.stamp.sec;
     imuPointerFront = (imuPointerLast + 1) % imuQueLength;
     systemInited = true;
   }
 
   timeScanLast = timeScanCur;
-  //timeScanCur = laserCloudIn2->header.stamp.toSec();
-  timeScanCur = rclcpp::Time(laserCloudIn2->header.stamp).seconds();
+  timeScanCur = laserCloudIn2->header.stamp.sec;
+  //timeScanCur = rclcpp::Time(laserCloudIn2->header.stamp).seconds();
   timeLasted = timeScanCur - initTime;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudIn(new pcl::PointCloud<pcl::PointXYZ>());
@@ -263,7 +263,7 @@ void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloud
     *laserCloudExtreCur += *laserCloudLessExtreCur;
     pcl::toROSMsg(*laserCloudExtreCur + *imuTrans, laserCloudLast2);
     //laserCloudLast2.header.stamp = ros::Time().fromSec(timeScanLast);
-    laserCloudLast2.header.stamp = rclcpp::Time(timeScanLast * 1e9);
+    laserCloudLast2.header.stamp = rclcpp::Time(timeScanLast);
     laserCloudLast2.header.frame_id = "camera";
 
     laserCloudExtreCur->clear();
@@ -621,7 +621,7 @@ if (skipFrameCount >= skipFrameNum) {
   sensor_msgs::msg::PointCloud2 laserCloudExtreCur2;
   pcl::toROSMsg(*laserCloudExtreCur + *imuTrans, laserCloudExtreCur2);
   //laserCloudExtreCur2.header.stamp = ros::Time().fromSec(timeScanCur);
-  laserCloudExtreCur2.header.stamp = rclcpp::Time(timeScanCur * 1e9);
+  laserCloudExtreCur2.header.stamp = rclcpp::Time(timeScanCur);
   laserCloudExtreCur2.header.frame_id = "camera";
 
   pubLaserCloudExtreCurPointer->publish(laserCloudExtreCur2);
@@ -656,8 +656,8 @@ void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuIn)
 
   imuPointerLast = (imuPointerLast + 1) % imuQueLength;
 
-  // imuTime[imuPointerLast] = imuIn->header.stamp.toSec() - 0.1068;
-  imuTime[imuPointerLast] = rclcpp::Time(imuIn->header.stamp).seconds() - 0.1068;
+  imuTime[imuPointerLast] = imuIn->header.stamp.sec - 0.1068;
+  //imuTime[imuPointerLast] = rclcpp::Time(imuIn->header.stamp).seconds() - 0.1068;
   imuRoll[imuPointerLast] = roll;
   imuPitch[imuPointerLast] = pitch;
   imuYaw[imuPointerLast] = yaw;
